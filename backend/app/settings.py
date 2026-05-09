@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     llm_model: str = Field(..., alias="LLM_MODEL")
     embeddings_model: str = Field(..., alias="EMBEDDINGS_MODEL")
     db_url: str = Field(..., alias="DB_URL")
+    s3_bucket: str = Field(..., alias="S3_BUCKET")
+    aws_region: str = Field(..., alias="AWS_REGION")
 
 @lru_cache
 def get_settings() -> Settings:

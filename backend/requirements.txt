@@ -7,3 +7,4 @@ langchain-text-splitters
 langchain_postgres
 pydantic
 pydantic-settings
+boto3
