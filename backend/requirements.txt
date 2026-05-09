@@ -1,0 +1,9 @@
+langgraph
+langchain
+langchain-openai
+fastapi
+langchain-core
+langchain-text-splitters
+langchain_postgres
+pydantic
+pydantic-settings
