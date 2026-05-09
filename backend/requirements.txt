@@ -5,6 +5,8 @@ fastapi
 langchain-core
 langchain-text-splitters
 langchain_postgres
+psycopg[binary]>=3.1
+sqlalchemy>=2.0
 pydantic
 pydantic-settings
 boto3
