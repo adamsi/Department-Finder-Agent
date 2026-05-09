@@ -5,6 +5,7 @@ fastapi
 langchain-core
 langchain-text-splitters
 langchain_postgres
+langgraph-checkpoint-postgres
 psycopg[binary]>=3.1
 sqlalchemy>=2.0
 pydantic

@@ -26,7 +26,7 @@ def get_all_conversations_for_user(session: Session, user_id: UUID) -> list[Chat
 def get_chat_messages(session: Session, conversation_id: UUID) -> list[ChatMessage]:
     rows = session.execute(
         text(
-            'SELECT content, "type" FROM chat_messages '
+            "SELECT content, role FROM chat_messages "
             "WHERE conversation_id = :conversation_id ORDER BY id ASC"
         ),
         {"conversation_id": conversation_id},
@@ -54,6 +54,7 @@ def save_message(
         ),
         {"conversation_id": conversation_id, "content": assistant_text},
     )
+    session.commit()
 
 
 def delete_conversation(session: Session, conversation_id: UUID) -> None:
