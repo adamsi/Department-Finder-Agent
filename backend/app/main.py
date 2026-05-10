@@ -1,4 +1,19 @@
+import asyncio
+import sys
+import warnings
+
+from langchain_core._api.deprecation import LangChainPendingDeprecationWarning
+
+warnings.filterwarnings(
+    "ignore"
+)
+
+# Windows-only: async psycopg (e.g. LangChain PGEngine) needs SelectorEventLoop. Linux/macOS/Docker: omit.
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 from dotenv import load_dotenv
+
 load_dotenv()
 
 from fastapi import Depends, FastAPI
@@ -10,13 +25,12 @@ from app.agent.graphs.supervisor_graph import (
 )
 from app.api.routers import auth_router, conversation_router, document_router, websocket_router
 from app.auth import require_ws_auth, session_cookie_middleware
-from app.settings import settings
 
 # will pass app object (web application) to uvicorn (the embedded server)
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[o.strip() for o in settings.cors_origins.split(",") if o.strip()],
+    allow_origin_regex=".*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

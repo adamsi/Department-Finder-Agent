@@ -21,7 +21,7 @@ def login(body: LoginRequest, response: Response) -> dict[str, bool]:
         key=SESSION_COOKIE,
         value=body.passkey,
         httponly=True,
-        secure=settings.cookie_secure,
+        secure=False,
         samesite="lax",
         max_age=60 * 60 * 24 * 10,  # 10 days
     )

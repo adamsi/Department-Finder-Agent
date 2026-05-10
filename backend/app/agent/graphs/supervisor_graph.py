@@ -4,6 +4,7 @@ from langgraph.constants import START, END
 from langgraph.graph import StateGraph, MessagesState
 
 from langgraph.checkpoint.postgres import PostgresSaver
+from app.db import db_url_for_libpq
 from app.agent.models import llm_model
 from app.agent.prompts import supervisor_prompt
 from app.agent.rag import get_rag_context
@@ -22,7 +23,9 @@ graph = None
 def init_supervisor_graph():
     global checkpointer_ctx, graph
 
-    checkpointer_ctx = PostgresSaver.from_conn_string(settings.db_url)
+    checkpointer_ctx = PostgresSaver.from_conn_string(
+        db_url_for_libpq(settings.db_url),
+    )
     checkpointer = checkpointer_ctx.__enter__()
 
     checkpointer.setup()

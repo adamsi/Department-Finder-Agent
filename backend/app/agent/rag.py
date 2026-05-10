@@ -7,13 +7,16 @@ from app.agent.models import embeddings_model
 from app.settings import settings
 
 pg_engine = PGEngine.from_connection_string(
-    url=settings.db_url
+    url=settings.db_url,
 )
 
 vector_store = PGVectorStore.create_sync(
     engine=pg_engine,
-    table_name='document_vector_store',
-    embedding_service=embeddings_model
+    table_name="document_vector_store",
+    schema_name=settings.db_schema,
+    embedding_service=embeddings_model,
+    id_column="id",
+    metadata_json_column="metadata",
 )
 
 splitter = RecursiveCharacterTextSplitter(
