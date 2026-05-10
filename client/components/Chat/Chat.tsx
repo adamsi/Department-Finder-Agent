@@ -179,14 +179,17 @@ export const Chat: FC<Props> = memo(
               {conversation.messages.length === 0 ? (
                 <>
                   <div className="mx-auto flex w-[350px] flex-col space-y-10 pt-12 sm:w-[600px]">
-                    <div className="text-center text-3xl font-semibold text-gray-800 dark:text-gray-100">
-                      {conversation.chatId ? (
-                        // If we have a chatId but no messages, we're loading - show empty
-                        ''
-                      ) : (
-                        title
-                      )}
-                    </div>
+                    {!conversation.chatId && title ? (
+                      <div className="flex flex-col items-center gap-4">
+                        <div className="flex items-center justify-center gap-3">
+                         
+                          <span className="text-2xl font-semibold text-gray-800 dark:text-gray-100 sm:text-3xl">
+                            {title}
+                          </span>
+                    
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 </>
               ) : (

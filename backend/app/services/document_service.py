@@ -31,11 +31,11 @@ def validate_file(file: UploadFile) -> None:
 async def create_new_documents(
     session: Session, files: list[UploadFile], parent_folder_id: UUID
 ) -> list[S3Document]:
-    folder = doc_repo.get_folder(session, parent_folder_id)
-    if folder is None:
-        raise ValueError(f"Folder {parent_folder_id} not found")
     out: list[S3Document] = []
     with session.begin():
+        folder = doc_repo.get_folder(session, parent_folder_id)
+        if folder is None:
+            raise ValueError(f"Folder {parent_folder_id} not found")
         for file in files:
             validate_file(file)
             try:
@@ -58,8 +58,8 @@ async def create_new_documents(
 
 
 def delete_documents(session: Session, document_ids: list[UUID]) -> None:
-    docs = doc_repo.list_documents_by_ids(session, document_ids)
     with session.begin():
+        docs = doc_repo.list_documents_by_ids(session, document_ids)
         doc_repo.delete_documents(session, docs)
     for d in docs:
         rag.delete_docs(d)

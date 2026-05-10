@@ -42,12 +42,12 @@ app.include_router(conversation_router.router)
 app.include_router(websocket_router.router, dependencies=[Depends(require_ws_auth)])
 
 @app.on_event("startup")
-def init():
+async def init():
     print("Initialization started...")
-    init_supervisor_graph()
+    await init_supervisor_graph()
     print("Initialization completed successfully.")
 
 
 @app.on_event("shutdown")
-def shutdown():
-    close_supervisor_graph()
+async def shutdown():
+    await close_supervisor_graph()

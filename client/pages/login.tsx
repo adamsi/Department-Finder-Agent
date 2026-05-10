@@ -32,7 +32,16 @@ export default function LoginPage() {
           onSubmit={onSubmit}
           className="w-full max-w-sm space-y-4 rounded-xl border border-slate-700/80 bg-slate-900/90 p-6 shadow-xl backdrop-blur"
         >
-          <h1 className="text-lg font-semibold text-white">Department Finder</h1>
+          <div className="flex items-center gap-3">
+            <div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg shadow-lg">
+              <img
+                src="/sa-logo.png"
+                alt="Department Finder"
+                className="h-full w-full object-cover"
+              />
+            </div>
+            <h1 className="text-lg font-semibold text-white">Department Finder</h1>
+          </div>
           <p className="text-sm text-slate-400">Enter the app passkey to continue.</p>
           <input
             type="password"

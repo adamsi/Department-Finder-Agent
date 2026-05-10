@@ -1,9 +1,10 @@
+import sys
 from collections.abc import AsyncIterator
 
 from langgraph.constants import START, END
 from langgraph.graph import StateGraph, MessagesState
 
-from langgraph.checkpoint.postgres import PostgresSaver
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from app.db import db_url_for_libpq
 from app.agent.models import llm_model
 from app.agent.prompts import supervisor_prompt
@@ -17,24 +18,34 @@ class SupervisorState(MessagesState):
     user_prompt: str
     rag_context: str
 
-checkpointer_ctx = None
+checkpointer_cm = None
 graph = None
 
-def init_supervisor_graph():
-    global checkpointer_ctx, graph
 
-    checkpointer_ctx = PostgresSaver.from_conn_string(
+async def init_supervisor_graph():
+    """Open async Postgres checkpointer (required for ``graph.astream`` / ``aget_tuple``)."""
+    global checkpointer_cm, graph
+
+    cm = AsyncPostgresSaver.from_conn_string(
         db_url_for_libpq(settings.db_connection_url),
     )
-    checkpointer = checkpointer_ctx.__enter__()
+    checkpointer = await cm.__aenter__()
+    try:
+        await checkpointer.setup()
+        graph = builder.compile(checkpointer=checkpointer)
+    except BaseException:
+        await cm.__aexit__(*sys.exc_info())
+        checkpointer_cm = None
+        raise
+    checkpointer_cm = cm
 
-    checkpointer.setup()
-    graph = builder.compile(checkpointer=checkpointer)
 
-
-def close_supervisor_graph():
-    if checkpointer_ctx:
-        checkpointer_ctx.__exit__(None, None, None)
+async def close_supervisor_graph():
+    global checkpointer_cm, graph
+    graph = None
+    if checkpointer_cm is not None:
+        await checkpointer_cm.__aexit__(None, None, None)
+        checkpointer_cm = None
 
 
 def retrieve_rag(state: SupervisorState):

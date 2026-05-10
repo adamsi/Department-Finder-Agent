@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useAppDispatch } from '@/store/hooks';
 import { IconUpload, IconX, IconFile } from '@tabler/icons-react';
@@ -11,11 +11,23 @@ interface FileUploadProps {
   /** Numeric folder id from the API (string or number is fine). */
   parentFolderId: string | number;
   onUploadComplete?: () => void;
+  /** True while upload + folder refresh are in progress (for modal close guards). */
+  onUploadBusyChange?: (busy: boolean) => void;
 }
 
-const FileUpload: React.FC<FileUploadProps> = ({ className = '', parentFolderId, onUploadComplete }) => {
+const FileUpload: React.FC<FileUploadProps> = ({
+  className = '',
+  parentFolderId,
+  onUploadComplete,
+  onUploadBusyChange,
+}) => {
   const dispatch = useAppDispatch();
   const { uploading } = useSelector((state: RootState) => state.upload);
+  const [uploadWorking, setUploadWorking] = useState(false);
+
+  useEffect(() => {
+    onUploadBusyChange?.(uploadWorking);
+  }, [uploadWorking, onUploadBusyChange]);
   
   const [dragActive, setDragActive] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -56,31 +68,35 @@ const FileUpload: React.FC<FileUploadProps> = ({ className = '', parentFolderId,
   const handleUpload = useCallback(async () => {
     if (selectedFiles.length === 0) return;
 
+    setUploadWorking(true);
     try {
-      await dispatch(
-        uploadFiles({ files: selectedFiles, parentFolderId: String(parentFolderId) })
-      ).unwrap();
-    } catch (error: unknown) {
-      console.error('Upload failed:', error);
-      toast.error(typeof error === 'string' ? error : 'Upload failed');
-      return;
-    }
+      try {
+        await dispatch(
+          uploadFiles({ files: selectedFiles, parentFolderId: String(parentFolderId) })
+        ).unwrap();
+      } catch (error: unknown) {
+        console.error('Upload failed:', error);
+        toast.error(typeof error === 'string' ? error : 'Upload failed');
+        return;
+      }
 
-    setSelectedFiles([]);
+      setSelectedFiles([]);
 
-    try {
-      await dispatch(fetchRootFolder()).unwrap();
-    } catch (error: unknown) {
-      console.error('Failed to refresh folders after upload:', error);
-      const detail =
-        typeof error === 'string' ? error : 'Could not reload the folder list.';
-      toast.error(`Upload complete, but reloading folders failed (${detail}). Try refreshing the page.`);
+      try {
+        await dispatch(fetchRootFolder()).unwrap();
+      } catch (error: unknown) {
+        console.error('Failed to refresh folders after upload:', error);
+        const detail =
+          typeof error === 'string' ? error : 'Could not reload the folder list.';
+        toast.error(`Upload complete, but reloading folders failed (${detail}). Try refreshing the page.`);
+        onUploadComplete?.();
+        return;
+      }
+
       onUploadComplete?.();
-      return;
+    } finally {
+      setUploadWorking(false);
     }
-
-    onUploadComplete?.();
-    toast.success('Upload complete');
   }, [dispatch, selectedFiles, parentFolderId, onUploadComplete]);
 
   const formatFileSize = (bytes: number): string => {
@@ -105,7 +121,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ className = '', parentFolderId,
             ? 'border-blue-400 bg-blue-500/15 scale-[1.01] shadow-xl shadow-blue-500/20' 
             : 'border-white/20 hover:border-blue-400/60 hover:bg-blue-500/8 hover:shadow-lg hover:shadow-blue-500/10'
           }
-          ${uploading ? 'pointer-events-none opacity-50' : ''}
+          ${uploadWorking ? 'pointer-events-none opacity-50' : ''}
         `}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
@@ -191,16 +207,16 @@ const FileUpload: React.FC<FileUploadProps> = ({ className = '', parentFolderId,
         <div className="mt-6">
           <button
             onClick={handleUpload}
-            disabled={uploading}
+            disabled={uploadWorking}
             className={`
               w-full py-3 px-6 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 text-base
-              ${uploading
+              ${uploadWorking
                 ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
                 : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-500 hover:to-indigo-500 hover:scale-[1.01] shadow-lg hover:shadow-xl hover:shadow-blue-500/25'
               }
             `}
           >
-            {uploading ? (
+            {uploadWorking ? (
               <>
                 <div className="w-4 h-4 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />
                 <span>Uploading...</span>
@@ -215,9 +231,11 @@ const FileUpload: React.FC<FileUploadProps> = ({ className = '', parentFolderId,
         </div>
       )}
 
-      {uploading && (
+      {uploadWorking && (
         <p className="mt-4 text-center text-sm text-blue-200/80">
-          Uploading — please wait until the server finishes processing…
+          {uploading
+            ? 'Uploading — please wait until the server finishes processing…'
+            : 'Updating folder — your files will appear in a moment…'}
         </p>
       )}
 

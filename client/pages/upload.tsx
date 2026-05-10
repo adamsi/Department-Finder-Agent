@@ -27,6 +27,7 @@ import {
 } from '@tabler/icons-react';
 import type { FolderEntity, DocumentEntity } from '@/types/ingestion';
 import { FileUpload, DocumentViewer } from '@/components/Upload';
+import { showToast } from '@/store/slices/toastSlice';
 
 interface BreadcrumbItem {
   id: string;
@@ -52,7 +53,7 @@ const buildPathToFolder = (
 export default function UploadPage() {
   const dispatch = useAppDispatch();
   const router = useRouter();
-  const { rootFolder, currentFolder, loading, deleting, error, success, uploading } = useAppSelector(
+  const { rootFolder, currentFolder, loading, deleting, error, success } = useAppSelector(
     (state) => state.upload
   );
   const { lastVisitedChatId } = useAppSelector((state) => state.chatMemory);
@@ -79,6 +80,9 @@ export default function UploadPage() {
   });
   const [viewerDocument, setViewerDocument] = useState<DocumentEntity | null>(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
+  /** Ids hidden immediately on delete; cleared after refresh or reverted on error. */
+  const [optimisticallyHiddenIds, setOptimisticallyHiddenIds] = useState<Set<string>>(new Set());
+  const [fileUploadBusy, setFileUploadBusy] = useState(false);
 
   useEffect(() => {
     // Skip if AuthGate already prefetched or a fetch is in flight.
@@ -196,6 +200,10 @@ export default function UploadPage() {
 
   const runDelete = async (documentIds: string[], folderIds: string[]) => {
     if (!currentFolder || (documentIds.length === 0 && folderIds.length === 0)) return;
+    const toHide = [...documentIds, ...folderIds];
+    setOptimisticallyHiddenIds((prev) => new Set([...prev, ...toHide]));
+    setSelectedItems([]);
+    setIsSelectionMode(false);
     dispatch(clearSuccess());
     const currentFolderId = currentFolder.id;
     try {
@@ -205,15 +213,30 @@ export default function UploadPage() {
       if (folderIds.length > 0) {
         await dispatch(deleteFolders(folderIds)).unwrap();
       }
-      setSelectedItems([]);
-      setIsSelectionMode(false);
+      const docCount = documentIds.length;
+      const folderCount = folderIds.length;
+      let deleteMsg = '';
+      if (docCount > 0 && folderCount > 0) {
+        deleteMsg = `${docCount} file(s) and ${folderCount} folder(s) deleted.`;
+      } else if (docCount > 0) {
+        deleteMsg = `${docCount} document(s) deleted successfully!`;
+      } else {
+        deleteMsg = `${folderCount} folder(s) deleted successfully!`;
+      }
+      dispatch(showToast({ message: deleteMsg, type: 'success', duration: 3000 }));
       const result = await dispatch(fetchRootFolder()).unwrap();
+      setOptimisticallyHiddenIds(new Set());
       if (currentFolderId) {
         const targetFolder = findFolderById(currentFolderId, result);
         if (targetFolder) dispatch(setCurrentFolder(targetFolder));
       }
     } catch (e) {
       console.error('Delete failed:', e);
+      setOptimisticallyHiddenIds((prev) => {
+        const next = new Set(prev);
+        toHide.forEach((id) => next.delete(id));
+        return next;
+      });
     }
   };
 
@@ -340,6 +363,11 @@ export default function UploadPage() {
     return null;
   }
 
+  const visibleFolders =
+    currentFolder.childrenFolders?.filter((f) => !optimisticallyHiddenIds.has(f.id)) ?? [];
+  const visibleDocuments =
+    currentFolder.childrenDocuments?.filter((d) => !optimisticallyHiddenIds.has(d.id)) ?? [];
+
   const breadcrumbLabel = (crumb: BreadcrumbItem, index: number) =>
     index === 0 && rootFolder && crumb.id === rootFolder.id ? '/' : crumb.name;
 
@@ -454,8 +482,7 @@ export default function UploadPage() {
                 )}
 
                 <div className="ml-auto text-sm text-blue-200/70">
-                  {currentFolder.childrenFolders?.length || 0} folders,{' '}
-                  {currentFolder.childrenDocuments?.length || 0} files
+                  {visibleFolders.length} folders, {visibleDocuments.length} files
                   {isSelectionMode && (
                     <span className="ml-2 rounded-lg bg-blue-500/20 px-2 py-1 text-xs text-blue-300">
                       Selection mode · Esc to exit
@@ -465,7 +492,7 @@ export default function UploadPage() {
               </div>
 
               <div className="grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-                {currentFolder.childrenFolders?.map((folder) => (
+                {visibleFolders.map((folder) => (
                   <div
                     key={folder.id}
                     role="button"
@@ -512,7 +539,7 @@ export default function UploadPage() {
                   </div>
                 ))}
 
-                {currentFolder.childrenDocuments?.map((document) => (
+                {visibleDocuments.map((document) => (
                   <div
                     key={document.id}
                     role="button"
@@ -557,7 +584,7 @@ export default function UploadPage() {
                 ))}
               </div>
 
-              {!currentFolder.childrenFolders?.length && !currentFolder.childrenDocuments?.length && (
+              {visibleFolders.length === 0 && visibleDocuments.length === 0 && (
                 <div className="py-16 text-center">
                   <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-500/20">
                     <IconFolder className="h-8 w-8 text-gray-400" />
@@ -582,7 +609,7 @@ export default function UploadPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => !uploading && setIsUploadModalOpen(false)}
+            onClick={() => !fileUploadBusy && setIsUploadModalOpen(false)}
             aria-hidden
           />
           <div className="relative max-h-[95vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-white/30 bg-black/90 p-6 shadow-[0_0_40px_rgba(0,0,0,0.85)] backdrop-blur-xl">
@@ -590,7 +617,7 @@ export default function UploadPage() {
               <h2 className="text-xl font-bold text-white">Upload files</h2>
               <button
                 type="button"
-                onClick={() => !uploading && setIsUploadModalOpen(false)}
+                onClick={() => !fileUploadBusy && setIsUploadModalOpen(false)}
                 className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-500/20 hover:text-white"
               >
                 <IconX className="h-5 w-5" />
@@ -599,6 +626,7 @@ export default function UploadPage() {
             <FileUpload
               className="w-full"
               parentFolderId={currentFolder.id}
+              onUploadBusyChange={setFileUploadBusy}
               onUploadComplete={() => setIsUploadModalOpen(false)}
             />
             <div className="mt-6 border-t border-white/10 pt-4 text-center text-sm text-blue-200/70">

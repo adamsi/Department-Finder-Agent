@@ -259,9 +259,8 @@ const uploadSlice = createSlice({
         state.deleting = true;
         state.error = null;
       })
-      .addCase(deleteDocuments.fulfilled, (state, action) => {
+      .addCase(deleteDocuments.fulfilled, (state) => {
         state.deleting = false;
-        state.success = `${action.payload.length} document(s) deleted successfully!`;
         state.error = null;
       })
       .addCase(deleteDocuments.rejected, (state, action) => {
@@ -273,9 +272,8 @@ const uploadSlice = createSlice({
         state.deleting = true;
         state.error = null;
       })
-      .addCase(deleteFolders.fulfilled, (state, action) => {
+      .addCase(deleteFolders.fulfilled, (state) => {
         state.deleting = false;
-        state.success = `${action.payload.length} folder(s) deleted successfully!`;
         state.error = null;
       })
       .addCase(deleteFolders.rejected, (state, action) => {
