@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     s3_bucket: str = Field(..., alias="S3_BUCKET")
     s3_region: str = Field(..., alias="S3_REGION")
     s3_endpoint_url: str | None = Field(default=None, alias="S3_ENDPOINT_URL")
+    api_passkey: str = Field(..., alias="APP_PASSKEY")
 
 @lru_cache
 def get_settings() -> Settings:
