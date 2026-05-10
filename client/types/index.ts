@@ -5,4 +5,3 @@ export * from './folder';
 export * from './openai';
 export * from './plugin';
 export * from './upload';
-export * from './websocket';

@@ -1,25 +1,37 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.auth import get_app_passkey
 from app.db import get_db
-from app.schemas import ChatMessage, ChatMetadata
+from app.schemas import ChatMessage, ChatMetadata, ChatStart
 from app.services import chat_memory_service
 
 router = APIRouter(prefix="/conversations")
 
 
-@router.get("", summary="List conversations for a user")
+class CreateConversationBody(BaseModel):
+    message: str
+
+
+@router.post("", summary="Start a new conversation", response_model=ChatStart)
+def create_conversation(
+    session: Annotated[Session, Depends(get_db)],
+    app_passkey: Annotated[str, Depends(get_app_passkey)],
+    body: CreateConversationBody,
+) -> ChatStart:
+    return chat_memory_service.create_conversation(session, app_passkey, body.message)
+
+
+@router.get("", summary="List conversations for the logged-in passkey")
 def get_all_conversations(
     session: Annotated[Session, Depends(get_db)],
-    user_id: Annotated[
-        UUID,
-        Query(description="Until auth is wired, pass the user id explicitly."),
-    ],
+    app_passkey: Annotated[str, Depends(get_app_passkey)],
 ) -> list[ChatMetadata]:
-    return chat_memory_service.get_all_conversations(session, user_id)
+    return chat_memory_service.get_all_conversations(session, app_passkey)
 
 
 @router.get(

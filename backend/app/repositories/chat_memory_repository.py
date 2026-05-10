@@ -1,4 +1,4 @@
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -6,13 +6,31 @@ from sqlalchemy.orm import Session
 from app.schemas import ChatMessage, ChatMetadata
 
 
-def get_all_conversations_for_user(session: Session, user_id: UUID) -> list[ChatMetadata]:
+def create_conversation(session: Session, app_passkey: str, description: str) -> UUID:
+    new_id = uuid4()
+    session.execute(
+        text(
+            "INSERT INTO conversations (id, app_passkey, description) "
+            "VALUES (:id, :app_passkey, :description)"
+        ),
+        {"id": new_id, "app_passkey": app_passkey, "description": description},
+    )
+    return new_id
+
+
+def get_all_conversations_for_passkey(
+    session: Session, app_passkey: str
+) -> list[ChatMetadata]:
     rows = session.execute(
         text(
-            "SELECT conversation_id, description FROM conversations "
-            "WHERE user_id = :user_id ORDER BY sequence_number DESC"
+            "SELECT c.id AS conversation_id, c.description FROM conversations c "
+            "WHERE c.app_passkey = :app_passkey "
+            "ORDER BY ("
+            "SELECT COALESCE(MAX(m.sequence_number), 0) FROM chat_memory m "
+            "WHERE m.conversation_id = c.id"
+            ") DESC"
         ),
-        {"user_id": user_id},
+        {"app_passkey": app_passkey},
     ).mappings()
     return [
         ChatMetadata(
@@ -26,8 +44,8 @@ def get_all_conversations_for_user(session: Session, user_id: UUID) -> list[Chat
 def get_chat_messages(session: Session, conversation_id: UUID) -> list[ChatMessage]:
     rows = session.execute(
         text(
-            "SELECT content, role FROM chat_messages "
-            "WHERE conversation_id = :conversation_id ORDER BY id ASC"
+            "SELECT content, role FROM chat_memory "
+            "WHERE conversation_id = :conversation_id ORDER BY sequence_number ASC"
         ),
         {"conversation_id": conversation_id},
     ).mappings()
@@ -42,17 +60,17 @@ def save_message(
 ) -> None:
     session.execute(
         text(
-            'INSERT INTO chat_messages (conversation_id, role, content) '
-            "VALUES (:conversation_id, 'human', :content)"
+            "INSERT INTO chat_memory (id, conversation_id, role, content) "
+            "VALUES (:id, :conversation_id, 'human', :content)"
         ),
-        {"conversation_id": conversation_id, "content": user_text},
+        {"id": uuid4(), "conversation_id": conversation_id, "content": user_text},
     )
     session.execute(
         text(
-            'INSERT INTO chat_messages (conversation_id, role, content) '
-            "VALUES (:conversation_id, 'ai', :content)"
+            "INSERT INTO chat_memory (id, conversation_id, role, content) "
+            "VALUES (:id, :conversation_id, 'ai', :content)"
         ),
-        {"conversation_id": conversation_id, "content": assistant_text},
+        {"id": uuid4(), "conversation_id": conversation_id, "content": assistant_text},
     )
     session.commit()
 
@@ -72,7 +90,7 @@ def delete_conversation(session: Session, conversation_id: UUID) -> None:
         {"tid": tid},
     )
     session.execute(
-        text("DELETE FROM chat_messages WHERE conversation_id = :conversation_id"),
+        text("DELETE FROM chat_memory WHERE conversation_id = :conversation_id"),
         {"conversation_id": conversation_id},
     )
     session.execute(

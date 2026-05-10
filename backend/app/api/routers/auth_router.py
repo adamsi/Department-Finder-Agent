@@ -19,9 +19,9 @@ def login(body: LoginRequest, response: Response) -> dict[str, bool]:
         raise HTTPException(status_code=401, detail="Invalid passkey")
     response.set_cookie(
         key=SESSION_COOKIE,
-        value="authenticated",
+        value=body.passkey,
         httponly=True,
-        secure=True,
+        secure=settings.cookie_secure,
         samesite="lax",
         max_age=60 * 60 * 24 * 10,  # 10 days
     )

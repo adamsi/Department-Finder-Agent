@@ -2,17 +2,19 @@ import React, { useState, useRef, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { useAppDispatch } from '@/store/hooks';
 import { IconUpload, IconX, IconFile } from '@tabler/icons-react';
+import toast from 'react-hot-toast';
 import { uploadFiles, fetchRootFolder } from '@/store/slices/uploadSlice';
 import { RootState } from '@/store';
 
 interface FileUploadProps {
   className?: string;
-  parentFolderId: string;
+  /** Numeric folder id from the API (string or number is fine). */
+  parentFolderId: string | number;
 }
 
 const FileUpload: React.FC<FileUploadProps> = ({ className = '', parentFolderId }) => {
   const dispatch = useAppDispatch();
-  const { uploading, uploadProgress } = useSelector((state: RootState) => state.upload);
+  const { uploading } = useSelector((state: RootState) => state.upload);
   
   const [dragActive, setDragActive] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -54,13 +56,15 @@ const FileUpload: React.FC<FileUploadProps> = ({ className = '', parentFolderId 
     if (selectedFiles.length === 0) return;
     
     try {
-      await dispatch(uploadFiles({ files: selectedFiles, parentFolderId })).unwrap();
+      await dispatch(
+        uploadFiles({ files: selectedFiles, parentFolderId: String(parentFolderId) })
+      ).unwrap();
       setSelectedFiles([]);
-      // Refresh the folder structure after upload
       dispatch(fetchRootFolder());
+      toast.success('Upload complete');
     } catch (error: unknown) {
-      // Error is handled by the toast in parent component
       console.error('Upload failed:', error);
+      toast.error(typeof error === 'string' ? error : 'Upload failed');
     }
   }, [dispatch, selectedFiles, parentFolderId]);
 
@@ -100,7 +104,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ className = '', parentFolderId 
           multiple
           className="hidden"
           onChange={handleFileInput}
-          accept="*/*"
+          accept=".pdf,.txt,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.odt,application/pdf,text/plain"
         />
         
         <div className="space-y-4">
@@ -196,16 +200,10 @@ const FileUpload: React.FC<FileUploadProps> = ({ className = '', parentFolderId 
         </div>
       )}
 
-      {/* Progress Bar */}
       {uploading && (
-        <div className="mt-4">
-          <div className="w-full bg-gray-700/50 rounded-full h-2 backdrop-blur-sm">
-            <div
-              className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full transition-all duration-300 shadow-lg"
-              style={{ width: `${uploadProgress}%` }}
-            />
-          </div>
-        </div>
+        <p className="mt-4 text-center text-sm text-blue-200/80">
+          Uploading — please wait until the server finishes processing…
+        </p>
       )}
 
     </div>

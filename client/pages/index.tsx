@@ -64,7 +64,7 @@ const Home: React.FC = () => {
   const pendingReduxUpdateRef = useRef<{ chatId: string; messages: ChatMessage[] } | null>(null);
 
   // Streaming hook
-  const { sendMessage, handleStop, messageIsStreaming, stopConversationRef, chatService } = useChatStreaming({
+  const { sendMessage, handleStop, messageIsStreaming, stopConversationRef } = useChatStreaming({
     onStreamUpdate: (conversation) => {
       // Preserve description from metadata if it exists
       if (conversation.chatId && metadataDescriptionsRef.current[conversation.chatId]) {
@@ -128,8 +128,6 @@ const Home: React.FC = () => {
   });
 
   useEffect(() => {
-    chatService.setAuthenticated(true);
-    chatService.connect();
     loadChats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -140,20 +138,13 @@ const Home: React.FC = () => {
     }
   }, [dispatch, rootFolder]);
 
-  // WEBSOCKET CLEANUP
   useEffect(() => {
-    const handleLogout = () => {
-      chatService.disconnect();
-    };
-    window.addEventListener('websocket-disconnect', handleLogout);
     return () => {
-      window.removeEventListener('websocket-disconnect', handleLogout);
-      // Cleanup Redux update timer
       if (reduxUpdateTimerRef.current) {
         clearTimeout(reduxUpdateTimerRef.current);
       }
     };
-  }, [chatService]);
+  }, []);
 
   // HANDLERS
   const handleLightMode = (mode: 'dark' | 'light') => {

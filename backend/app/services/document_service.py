@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
 
@@ -27,7 +29,7 @@ def validate_file(file: UploadFile) -> None:
 
 
 async def create_new_documents(
-    session: Session, files: list[UploadFile], parent_folder_id: int
+    session: Session, files: list[UploadFile], parent_folder_id: UUID
 ) -> list[S3Document]:
     folder = doc_repo.get_folder(session, parent_folder_id)
     if folder is None:
@@ -55,7 +57,7 @@ async def create_new_documents(
     return out
 
 
-def delete_documents(session: Session, document_ids: list[int]) -> None:
+def delete_documents(session: Session, document_ids: list[UUID]) -> None:
     docs = doc_repo.list_documents_by_ids(session, document_ids)
     with session.begin():
         doc_repo.delete_documents(session, docs)
@@ -64,7 +66,7 @@ def delete_documents(session: Session, document_ids: list[int]) -> None:
         delete_file(d.url)
 
 
-async def edit_document(session: Session, file: UploadFile, document_id: int) -> S3Document:
+async def edit_document(session: Session, file: UploadFile, document_id: UUID) -> S3Document:
     validate_file(file)
     doc = doc_repo.get_document(session, document_id)
     if doc is None:

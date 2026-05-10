@@ -31,19 +31,20 @@ CREATE INDEX idx_s3_documents_folder_id ON prod.s3_documents(folder_id);
 CREATE INDEX idx_s3_folders_parent_id ON prod.s3_folders(parent_id);
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-CREATE SEQUENCE prod_agent.conversation_sequence START 1;
+CREATE SEQUENCE prod.conversation_sequence START 1;
 
 CREATE TABLE prod.conversations (
     id UUID PRIMARY KEY,
-    user_id UUID NOT NULL,
-    title TEXT,
+    app_passkey TEXT NOT NULL,
+    description TEXT,
     created_at TIMESTAMP DEFAULT now()
 );
 
 
 CREATE TABLE prod.chat_memory (
     id UUID PRIMARY KEY,
-    conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    conversation_id UUID NOT NULL REFERENCES prod.conversations(id) ON DELETE CASCADE,
+    sequence_number BIGINT DEFAULT nextval('prod.conversation_sequence'),
     role TEXT NOT NULL,
     content TEXT NOT NULL
 );

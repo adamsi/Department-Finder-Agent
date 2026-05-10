@@ -37,9 +37,9 @@ export const uploadFiles = createAsyncThunk(
       files.forEach(file => formData.append('files', file));
       
       
-      formData.append('parentFolderId', parentFolderId);
+      formData.append('parent_folder_id', parentFolderId);
 
-      const response = await api.post('/ingestion/documents', formData, {
+      const response = await api.post('/documents', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -69,14 +69,10 @@ export const editDocument = createAsyncThunk(
       // Add the file
       formData.append('file', file);
       
-      // Add the UUID as a text/plain blob so Spring Boot can deserialize it
-      const idBlob = new Blob([documentId], { type: 'text/plain' });
-      formData.append('id', idBlob);
-
-      const response = await api.patch('/ingestion/documents/edit', formData, {
+      const response = await api.patch(`/documents/edit/${encodeURIComponent(documentId)}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
-        },  
+        },
         withCredentials: true,
       });
 
@@ -91,7 +87,7 @@ export const fetchRootFolder = createAsyncThunk(
   'upload/fetchRootFolder',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await api.get('/ingestion/folders', {
+      const response = await api.get('/documents', {
         withCredentials: true,
       });
       return response.data;
@@ -119,8 +115,9 @@ export const deleteDocuments = createAsyncThunk(
   'upload/deleteDocuments',
   async (ids: string[], { rejectWithValue }) => {
     try {
-      await api.delete('/ingestion/documents', {
-        data: ids,
+      const qs = new URLSearchParams();
+      ids.forEach((id) => qs.append('document_ids', id));
+      await api.delete(`/documents/delete?${qs.toString()}`, {
         withCredentials: true,
       });
       return ids;

@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback } from 'react';
 import { Conversation, Message } from '@/types/chat';
-import { ChatService } from '@/utils/websocket/chatService';
-import { WEBSOCKET_CONFIG } from '@/utils/websocket/config';
+import { createChatSocket } from '@/utils/chatWebSocket';
+import api from '@/utils/api';
 import toast from 'react-hot-toast';
 
 interface UseChatStreamingOptions {
@@ -10,20 +10,24 @@ interface UseChatStreamingOptions {
   onStreamComplete?: () => void;
 }
 
+const IDLE_MS = 500;
+
 /**
- * Custom hook to handle chat message streaming via WebSocket
- * Manages streaming state and WebSocket communication
+ * Streams assistant replies over the backend's plain WebSocket.
+ * New chats: POST /conversations first (creates id + title), then send the user message on the socket.
  */
 export const useChatStreaming = (options: UseChatStreamingOptions) => {
   const { onStreamUpdate, onMetadata, onStreamComplete } = options;
   const [messageIsStreaming, setMessageIsStreaming] = useState(false);
   const stopConversationRef = useRef<boolean>(false);
   const finalizeStreamRef = useRef<(() => void) | null>(null);
-  const chatService = useRef<ChatService>(ChatService.getInstance(WEBSOCKET_CONFIG.SERVER_URL));
+  const socketRef = useRef<WebSocket | null>(null);
   const currentConversationRef = useRef<Conversation | null>(null);
 
   const handleStop = useCallback(() => {
     stopConversationRef.current = true;
+    socketRef.current?.close();
+    socketRef.current = null;
     if (finalizeStreamRef.current) {
       finalizeStreamRef.current();
     } else {
@@ -31,18 +35,13 @@ export const useChatStreaming = (options: UseChatStreamingOptions) => {
     }
     setTimeout(() => {
       stopConversationRef.current = false;
-    }, 1000);
+    }, 500);
   }, []);
 
   const sendMessage = useCallback(
-    async (
-      conversation: Conversation,
-      message: Message,
-      deleteCount = 0
-    ) => {
+    async (conversation: Conversation, message: Message, deleteCount = 0) => {
       if (!conversation) return;
 
-      // Update conversation with user message
       const updatedMessages = deleteCount
         ? [...conversation.messages.slice(0, -deleteCount), message]
         : [...conversation.messages, message];
@@ -58,140 +57,117 @@ export const useChatStreaming = (options: UseChatStreamingOptions) => {
 
       let assistantMessage: Message = { role: 'assistant', content: '' };
       let isFirstChunk = true;
-      let completionTimer: any = null;
+      let completionTimer: ReturnType<typeof setTimeout> | null = null;
       let receivedChatId: string | undefined = updatedConversation.chatId;
+      let finalized = false;
 
       const finalizeStream = () => {
+        if (finalized) return;
+        finalized = true;
         if (completionTimer) {
           clearTimeout(completionTimer);
           completionTimer = null;
         }
-
+        socketRef.current = null;
         setMessageIsStreaming(false);
-
         if (currentConversationRef.current) {
           const finalConversation = {
             ...currentConversationRef.current,
-            chatId: receivedChatId,
+            chatId: receivedChatId ?? currentConversationRef.current.chatId,
           };
           currentConversationRef.current = finalConversation;
           onStreamUpdate(finalConversation);
         }
-
-        // Call onStreamComplete callback if provided
-        if (onStreamComplete) {
-          onStreamComplete();
-        }
-
+        onStreamComplete?.();
         finalizeStreamRef.current = null;
       };
 
       finalizeStreamRef.current = finalizeStream;
 
+      const bumpIdleDone = () => {
+        if (finalized) return;
+        if (completionTimer) clearTimeout(completionTimer);
+        completionTimer = setTimeout(finalizeStream, IDLE_MS);
+      };
+
+      const streamHandler = (chunk: string) => {
+        if (stopConversationRef.current || !currentConversationRef.current) {
+          socketRef.current?.close();
+          finalizeStream();
+          return;
+        }
+        bumpIdleDone();
+
+        let updated: Conversation;
+        if (isFirstChunk) {
+          isFirstChunk = false;
+          assistantMessage = { role: 'assistant', content: chunk };
+          updated = {
+            ...currentConversationRef.current,
+            messages: [...currentConversationRef.current.messages, assistantMessage],
+          };
+        } else {
+          assistantMessage = { ...assistantMessage, content: assistantMessage.content + chunk };
+          updated = {
+            ...currentConversationRef.current,
+            messages: currentConversationRef.current.messages.map((msg, index) =>
+              index === currentConversationRef.current!.messages.length - 1 ? assistantMessage : msg
+            ),
+          };
+        }
+
+        currentConversationRef.current = updated;
+        onStreamUpdate(updated);
+      };
+
       try {
         const isNewConversation = !updatedConversation.chatId && updatedConversation.messages.length === 1;
 
-        const streamHandler = (chunk: string) => {
-          if (stopConversationRef.current || !currentConversationRef.current) {
-            chatService.current.abortCurrentStream(updatedConversation.chatId);
-            finalizeStream();
-            return;
-          }
-
-          // Clear any existing completion timer - we're still receiving chunks
-          if (completionTimer) clearTimeout(completionTimer);
-          // Set a timeout as fallback for dead connections (500ms)
-          // The actual completion will come immediately from WebSocket onComplete callback when isComplete is true
-          completionTimer = setTimeout(() => {
-            finalizeStream();
-          }, 500);
-
-          let updated: Conversation;
-          if (isFirstChunk) {
-            isFirstChunk = false;
-            assistantMessage = { role: 'assistant', content: chunk };
-            updated = {
-              ...currentConversationRef.current,
-              messages: [...currentConversationRef.current.messages, assistantMessage],
-            };
-          } else {
-            assistantMessage.content += chunk;
-            updated = {
-              ...currentConversationRef.current,
-              messages: currentConversationRef.current.messages.map((msg, index) =>
-                index === currentConversationRef.current!.messages.length - 1 ? assistantMessage : msg
-              ),
-            };
-          }
-
-          currentConversationRef.current = updated;
-          // Update immediately for smooth streaming
-          onStreamUpdate(updated);
-        };
+        let chatId = updatedConversation.chatId;
 
         if (isNewConversation) {
-          await chatService.current.startNewChat(
-            message.content,
-            'SIMPLE',
-            streamHandler,
-            () => {
-              // Clear completion timer since stream is complete
-              if (completionTimer) {
-                clearTimeout(completionTimer);
-                completionTimer = null;
-              }
-              // Immediately finalize when WebSocket signals completion
-              finalizeStream();
-            },
-            (error: string) => {
-              console.error('WebSocket error:', error);
-              toast.error('Connection error. Please try again.');
-              setMessageIsStreaming(false);
-            },
-            (metadata) => {
-              receivedChatId = metadata.chatId;
-              if (onMetadata) {
-                onMetadata(metadata);
-              }
-            },
-            undefined
-          );
-        } else {
-          if (!updatedConversation.chatId) {
-            toast.error('Chat ID is missing.');
-            setMessageIsStreaming(false);
-            return;
-          }
+          const { data } = await api.post<{ chatId: string; description: string }>('/conversations', {
+            message: message.content,
+          });
+          receivedChatId = data.chatId;
+          chatId = data.chatId;
+          onMetadata?.(data);
 
-          await chatService.current.sendMessage(
-            message.content,
-            updatedConversation.chatId,
-            'SIMPLE',
-            streamHandler,
-            () => {
-              // Clear completion timer since stream is complete
-              if (completionTimer) {
-                clearTimeout(completionTimer);
-                completionTimer = null;
-              }
-              // Immediately finalize when WebSocket signals completion
-              finalizeStream();
-            },
-            (error: string) => {
-              console.error('WebSocket error:', error);
-              toast.error('Connection error. Please try again.');
-              setMessageIsStreaming(false);
-            },
-            undefined
-          );
+          const withId: Conversation = {
+            ...updatedConversation,
+            id: data.chatId,
+            chatId: data.chatId,
+            name: data.description,
+          };
+          currentConversationRef.current = withId;
+          onStreamUpdate(withId);
         }
+
+        if (!chatId) {
+          toast.error('Chat ID is missing.');
+          setMessageIsStreaming(false);
+          return;
+        }
+
+        socketRef.current?.close();
+        socketRef.current = createChatSocket(chatId, message.content, {
+          onChunk: streamHandler,
+          onError: () => {
+            toast.error('Connection error. Please try again.');
+            finalizeStream();
+          },
+          onSocketClosed: () => {
+            if (stopConversationRef.current) return;
+            bumpIdleDone();
+          },
+        });
       } catch (error) {
         console.error('Failed to send message:', error);
         toast.error('Failed to send message. Please try again.');
         setMessageIsStreaming(false);
       }
     },
-    [onStreamUpdate, onMetadata]
+    [onStreamUpdate, onMetadata, onStreamComplete]
   );
 
   return {
@@ -199,6 +175,5 @@ export const useChatStreaming = (options: UseChatStreamingOptions) => {
     handleStop,
     messageIsStreaming,
     stopConversationRef,
-    chatService: chatService.current,
   };
 };

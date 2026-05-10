@@ -50,3 +50,11 @@ def delete_file(url: str) -> None:
         s3.delete_object(Bucket=bucket, Key=key)
     except ClientError as e:
         raise RuntimeError("S3 delete failed") from e
+
+
+def get_s3_object(url: str):
+    """Return boto3 get_object response (includes Body stream, ContentType, etc.)."""
+    if not url.startswith("s3://"):
+        raise ValueError(f"Expected s3:// URL, got {url!r}")
+    bucket, key = _parse_s3_url(url)
+    return s3.get_object(Bucket=bucket, Key=key)

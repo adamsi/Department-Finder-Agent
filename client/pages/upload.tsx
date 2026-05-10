@@ -29,7 +29,8 @@ export default function UploadPage() {
             </Link>
           </div>
           <p className="text-sm text-white/70">
-            Files are sent to your Department Finder ingestion API using the configured user id.
+            Files upload in one request; the server ingests them before responding. Allowed types: PDF, Word, PowerPoint,
+            Excel, ODT, plain text.
           </p>
           {loading && !rootFolder ? (
             <LoadingSpinner />

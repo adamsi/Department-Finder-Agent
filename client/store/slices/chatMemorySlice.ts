@@ -18,12 +18,25 @@ const initialState: ChatMemoryState = {
   error: null,
 };
 
+type ConversationRow = { conversation_id: string; description: string | null };
+type MessageRow = { content: string; role: string };
+
+function mapApiMessage(m: MessageRow): ChatMessage {
+  const role = m.role?.toLowerCase();
+  const type: ChatMessage['type'] = role === 'human' || role === 'user' ? 'USER' : 'ASSISTANT';
+  return { content: m.content, type };
+}
+
 export const fetchAllChats = createAsyncThunk(
   'chatMemory/fetchAllChats',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await api.get('/chat-memory', { withCredentials: true });
-      return response.data;
+      const response = await api.get<ConversationRow[]>('/conversations');
+      const rows = response.data;
+      return rows.map((r) => ({
+        chatId: r.conversation_id,
+        description: r.description ?? '',
+      }));
     } catch (error) {
       return rejectWithValue(handleAxiosError(error));
     }
@@ -34,8 +47,9 @@ export const fetchChatMessages = createAsyncThunk(
   'chatMemory/fetchChatMessages',
   async (chatId: string, { rejectWithValue }) => {
     try {
-      const response = await api.get(`/chat-memory/${encodeURIComponent(chatId)}`, { withCredentials: true });
-      return { chatId, messages: response.data };
+      const response = await api.get<MessageRow[]>(`/conversations/${encodeURIComponent(chatId)}`);
+      const messages = response.data.map(mapApiMessage);
+      return { chatId, messages };
     } catch (error) {
       return rejectWithValue(handleAxiosError(error));
     }
@@ -46,7 +60,7 @@ export const deleteChat = createAsyncThunk(
   'chatMemory/deleteChat',
   async (chatId: string, { rejectWithValue }) => {
     try {
-      await api.delete(`/chat-memory/${encodeURIComponent(chatId)}`, { withCredentials: true });
+      await api.delete(`/conversations/${encodeURIComponent(chatId)}`);
       return chatId;
     } catch (error) {
       return rejectWithValue(handleAxiosError(error));

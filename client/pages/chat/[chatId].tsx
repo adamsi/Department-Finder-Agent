@@ -54,7 +54,7 @@ const ChatPage: React.FC = () => {
   const pendingReduxUpdateRef = useRef<{ chatId: string; messages: ChatMessage[] } | null>(null);
 
   // Streaming hook
-  const { sendMessage, handleStop, messageIsStreaming, stopConversationRef, chatService } = useChatStreaming({
+  const { sendMessage, handleStop, messageIsStreaming, stopConversationRef } = useChatStreaming({
     onStreamUpdate: (conversation) => {
       // Preserve description from metadata if it exists
       if (conversation.chatId && metadataDescriptionsRef.current[conversation.chatId]) {
@@ -118,24 +118,12 @@ const ChatPage: React.FC = () => {
   });
 
   useEffect(() => {
-    chatService.setAuthenticated(true);
-    chatService.connect();
-  }, [chatService]);
-
-  // WEBSOCKET CLEANUP
-  useEffect(() => {
-    const handleLogout = () => {
-      chatService.disconnect();
-    };
-    window.addEventListener('websocket-disconnect', handleLogout);
     return () => {
-      window.removeEventListener('websocket-disconnect', handleLogout);
-      // Cleanup Redux update timer
       if (reduxUpdateTimerRef.current) {
         clearTimeout(reduxUpdateTimerRef.current);
       }
     };
-  }, [chatService]);
+  }, []);
 
   // Reset navigation guard when route changes
   useEffect(() => {

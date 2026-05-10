@@ -4,6 +4,7 @@ import { Inter } from 'next/font/google';
 import { Toaster } from 'react-hot-toast';
 import { Provider } from 'react-redux';
 import { store } from '@/store';
+import { AuthGate } from '@/components/AuthGate';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 
@@ -95,7 +96,9 @@ function AppContent({ Component, pageProps }: Pick<AppProps, 'Component' | 'page
         />
         <div className="min-h-screen flex flex-col">
           <div className="flex-1">
-            <Component {...pageProps} />
+            <AuthGate>
+              <Component {...pageProps} />
+            </AuthGate>
           </div>
         </div>
       </div>

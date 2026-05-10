@@ -12,8 +12,3 @@ export interface FolderEntity {
   childrenFolders?: FolderEntity[];
   childrenDocuments?: DocumentEntity[];
 }
-
-export interface CreateFolderDTO {
-  name: string;
-  parentFolderId?: string | null;
-}

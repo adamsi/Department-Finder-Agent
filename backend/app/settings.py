@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     s3_region: str = Field(..., alias="S3_REGION")
     s3_endpoint_url: str | None = Field(default=None, alias="S3_ENDPOINT_URL")
     api_passkey: str = Field(..., alias="APP_PASSKEY")
+    # Browser clients (e.g. Next.js on another origin) need CORS + non-secure cookies on http://localhost
+    cors_origins: str = Field(default="http://localhost:3000", alias="CORS_ORIGINS")
+    cookie_secure: bool = Field(default=False, alias="COOKIE_SECURE")
 
 @lru_cache
 def get_settings() -> Settings:

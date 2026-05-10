@@ -1,22 +1,29 @@
-from typing import Optional
-from sqlalchemy import ForeignKey, String
+from __future__ import annotations
+
+from uuid import UUID, uuid4
+
+from sqlalchemy import ForeignKey, String, Uuid
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
 
 class Base(DeclarativeBase):
     pass
 
+
 class S3Folder(Base):
     __tablename__ = "s3_folders"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    parent_id: Mapped[Optional[int]] = mapped_column(
+    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
+    name: Mapped[str] = mapped_column(String(255))
+    parent_id: Mapped[UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
         ForeignKey("s3_folders.id"),
         nullable=True,
     )
-    subfolders: Mapped[list["S3Folder"]] = relationship(
+    subfolders: Mapped[list[S3Folder]] = relationship(
         back_populates="parent",
     )
-    parent: Mapped[Optional["S3Folder"]] = relationship(
+    parent: Mapped[S3Folder | None] = relationship(
         back_populates="subfolders",
         remote_side=lambda: [S3Folder.id],
     )
@@ -24,14 +31,18 @@ class S3Folder(Base):
         back_populates="parent_folder",
     )
 
+
 class S3Document(Base):
     __tablename__ = "s3_documents"
-    
-    id: Mapped[int] = mapped_column(primary_key=True)
+
+    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
     url: Mapped[str] = mapped_column(String)
-    name: Mapped[str] = mapped_column(String)
-    content_type: Mapped[str] = mapped_column("content_type", String)
-    folder_id: Mapped[int] = mapped_column(ForeignKey("s3_folders.id"))
-    parent_folder: Mapped[Optional["S3Folder"]] = relationship(
+    name: Mapped[str] = mapped_column(String(255))
+    content_type: Mapped[str] = mapped_column(String(255))
+    folder_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("s3_folders.id"),
+    )
+    parent_folder: Mapped[S3Folder | None] = relationship(
         back_populates="documents",
     )

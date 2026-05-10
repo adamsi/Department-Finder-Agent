@@ -58,11 +58,11 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
   const hasChanges = documentContent !== originalContent;
 
   const loadTextContent = useCallback(async () => {
-    if (!document) return;
+    if (!document?.url) return;
 
     setIsLoading(true);
     try {
-      const response = await fetch(document.url);
+      const response = await fetch(document.url, { credentials: 'include' });
       if (response.ok) {
         const content = await response.text();
         setDocumentContent(content);

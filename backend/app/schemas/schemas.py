@@ -9,3 +9,8 @@ class ChatMetadata(BaseModel):
 class ChatMessage(BaseModel):
     content: str
     role: str
+
+
+class ChatStart(BaseModel):
+    chatId: str
+    description: str
