@@ -2,7 +2,6 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { deleteChat, addChat, setLastVisitedChatId, setChatMessages } from '@/store/slices/chatMemorySlice';
-import { fetchRootFolder } from '@/store/slices/uploadSlice';
 import { Chat } from '@/components/Chat/Chat';
 import { Chatbar } from '@/components/Chatbar/Chatbar';
 import { Conversation, Message, ChatMessage } from '@/types/chat';
@@ -20,8 +19,7 @@ import { useChatStreaming } from '@/hooks/useChatStreaming';
 const Home: React.FC = () => {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { rootFolder } = useAppSelector((state) => state.upload);
-  const { loading: chatsLoading } = useAppSelector((state) => state.chatMemory);
+  const { loading: chatsLoading, deletingChatId } = useAppSelector((state) => state.chatMemory);
 
   // STATE
   const [appLoading, setAppLoading] = useState<boolean>(false);
@@ -131,12 +129,6 @@ const Home: React.FC = () => {
     loadChats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    if (!rootFolder) {
-      dispatch(fetchRootFolder());
-    }
-  }, [dispatch, rootFolder]);
 
   useEffect(() => {
     return () => {
@@ -308,6 +300,7 @@ const Home: React.FC = () => {
                 onUpdateConversation={handleUpdateConversation}
                 onClearConversations={handleClearConversations}
                 chatsLoading={chatsLoading}
+                deletingChatId={deletingChatId}
               />
                 <button
                   className={`fixed top-2.5 left-[310px] z-50 h-7 w-7 sm:top-0.5 sm:left-[310px] sm:h-8 sm:w-8 transition-colors ${

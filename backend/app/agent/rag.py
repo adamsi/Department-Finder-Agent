@@ -1,24 +1,17 @@
 from fastapi import UploadFile
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_postgres import PGEngine, PGVectorStore
+from langchain_postgres import PGVector
 
 from app.agent.models import embeddings_model
 from app.settings import settings
-
-pg_engine = PGEngine.from_connection_string(
-    url=settings.db_url,
+ 
+vector_store = PGVector(
+    embeddings=embeddings_model,
+    collection_name="document_vector_store",
+    connection=settings.db_url,
+    use_jsonb=True
 )
-
-vector_store = PGVectorStore.create_sync(
-    engine=pg_engine,
-    table_name="document_vector_store",
-    schema_name=settings.db_schema,
-    embedding_service=embeddings_model,
-    id_column="id",
-    metadata_json_column="metadata",
-)
-
 splitter = RecursiveCharacterTextSplitter(
     chunk_size=1000,
     chunk_overlap=200,

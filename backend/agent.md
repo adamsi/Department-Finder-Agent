@@ -21,3 +21,6 @@ Your goals:
 # Coding Rules
 
 - Write the shortest clean solution possible
+
+# Run server
+python -m uvicorn app.main:app --port 8080

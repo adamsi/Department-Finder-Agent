@@ -24,7 +24,7 @@ def init_supervisor_graph():
     global checkpointer_ctx, graph
 
     checkpointer_ctx = PostgresSaver.from_conn_string(
-        db_url_for_libpq(settings.db_url),
+        db_url_for_libpq(settings.db_connection_url),
     )
     checkpointer = checkpointer_ctx.__enter__()
 

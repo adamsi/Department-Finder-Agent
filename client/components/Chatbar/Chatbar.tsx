@@ -21,6 +21,7 @@ interface Props {
   ) => void;
   onClearConversations: () => void;
   chatsLoading?: boolean;
+  deletingChatId?: string | null;
 }
 
 export const Chatbar: FC<Props> = ({
@@ -35,6 +36,7 @@ export const Chatbar: FC<Props> = ({
   onUpdateConversation,
   onClearConversations,
   chatsLoading = false,
+  deletingChatId = null,
 }) => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filteredConversations, setFilteredConversations] =
@@ -107,6 +109,7 @@ export const Chatbar: FC<Props> = ({
               loading={loading}
               conversations={filteredConversations}
               selectedConversation={selectedConversation}
+              deletingChatId={deletingChatId}
               onSelectConversation={onSelectConversation}
               onDeleteConversation={handleDeleteConversation}
               onUpdateConversation={handleUpdateConversation}

@@ -10,7 +10,9 @@ import { Conversation, Message, ChatMessage } from '@/types/chat';
  */
 export const useConversations = () => {
   const dispatch = useAppDispatch();
-  const { chats, chatMessages } = useAppSelector((state) => state.chatMemory);
+  const { chats, chatMessages, loading: chatsLoading } = useAppSelector(
+    (state) => state.chatMemory,
+  );
 
   // Derived from Redux: chats + chatMessages
   // Conversations persist across navigation because Redux state persists
@@ -39,8 +41,10 @@ export const useConversations = () => {
   }, [chats, chatMessages]);
 
   const loadChats = useCallback(() => {
+    // Idempotent in dev (Strict Mode double-mount): wait for in-flight list fetch.
+    if (chatsLoading) return;
     dispatch(fetchAllChats());
-  }, [dispatch]);
+  }, [dispatch, chatsLoading]);
 
   const loadingChatIdsRef = useRef<Set<string>>(new Set());
   

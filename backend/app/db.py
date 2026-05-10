@@ -13,7 +13,7 @@ def db_url_for_libpq(url: str) -> str:
     return url
 
 
-engine = create_engine(settings.db_url, pool_pre_ping=True)
+engine = create_engine(settings.db_connection_url, pool_pre_ping=True)
 SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
 
 

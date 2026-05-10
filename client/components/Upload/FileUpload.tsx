@@ -55,19 +55,32 @@ const FileUpload: React.FC<FileUploadProps> = ({ className = '', parentFolderId,
 
   const handleUpload = useCallback(async () => {
     if (selectedFiles.length === 0) return;
-    
+
     try {
       await dispatch(
         uploadFiles({ files: selectedFiles, parentFolderId: String(parentFolderId) })
       ).unwrap();
-      setSelectedFiles([]);
-      await dispatch(fetchRootFolder()).unwrap();
-      onUploadComplete?.();
-      toast.success('Upload complete');
     } catch (error: unknown) {
       console.error('Upload failed:', error);
       toast.error(typeof error === 'string' ? error : 'Upload failed');
+      return;
     }
+
+    setSelectedFiles([]);
+
+    try {
+      await dispatch(fetchRootFolder()).unwrap();
+    } catch (error: unknown) {
+      console.error('Failed to refresh folders after upload:', error);
+      const detail =
+        typeof error === 'string' ? error : 'Could not reload the folder list.';
+      toast.error(`Upload complete, but reloading folders failed (${detail}). Try refreshing the page.`);
+      onUploadComplete?.();
+      return;
+    }
+
+    onUploadComplete?.();
+    toast.success('Upload complete');
   }, [dispatch, selectedFiles, parentFolderId, onUploadComplete]);
 
   const formatFileSize = (bytes: number): string => {

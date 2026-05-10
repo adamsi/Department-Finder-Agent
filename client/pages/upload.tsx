@@ -11,6 +11,7 @@ import {
   clearSuccess,
 } from '@/store/slices/uploadSlice';
 import LoadingSpinner from '@/components/Global/LoadingSpinner';
+import { Spinner } from '@/components/Global/Spinner';
 import ParticlesBackground from '@/components/Global/Particles';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
@@ -439,10 +440,7 @@ export default function UploadPage() {
                     className="flex items-center space-x-2 rounded-xl border border-red-500/30 bg-red-600/20 px-4 py-2 text-red-300 transition-all duration-200 hover:bg-red-600/30 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {deleting ? (
-                      <>
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-red-300 border-t-transparent" />
-                        <span>Deleting...</span>
-                      </>
+                      <span>Deleting…</span>
                     ) : (
                       <>
                         <IconTrash className="h-4 w-4" />
@@ -674,6 +672,20 @@ export default function UploadPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {deleting && (
+        <div
+          className="fixed inset-0 z-[55] flex items-center justify-center bg-black/40 backdrop-blur-[2px]"
+          role="status"
+          aria-busy="true"
+          aria-live="polite"
+        >
+          <div className="flex items-center gap-3 rounded-2xl border border-white/15 bg-black/70 px-6 py-4 shadow-2xl backdrop-blur-xl">
+            <Spinner size="1.35rem" className="text-blue-300" />
+            <span className="text-sm font-medium text-white/90">Deleting…</span>
           </div>
         </div>
       )}

@@ -7,6 +7,7 @@ interface Props {
   loading: boolean;
   conversations: Conversation[];
   selectedConversation: Conversation;
+  deletingChatId?: string | null;
   onSelectConversation: (conversation: Conversation) => void;
   onDeleteConversation: (conversation: Conversation) => void;
   onUpdateConversation: (
@@ -20,6 +21,7 @@ export const Conversations: FC<Props> = ({
   loading,
   conversations,
   selectedConversation,
+  deletingChatId = null,
   onSelectConversation,
   onDeleteConversation,
   onUpdateConversation,
@@ -32,10 +34,13 @@ export const Conversations: FC<Props> = ({
         .reverse()
         .map((conversation, index) => (
           <ConversationComponent
-            key={index}
+            key={conversation.chatId ?? `idx-${index}`}
             selectedConversation={selectedConversation}
             conversation={conversation}
             loading={loading}
+            deleteInProgress={
+              !!conversation.chatId && conversation.chatId === deletingChatId
+            }
             onSelectConversation={onSelectConversation}
             onDeleteConversation={onDeleteConversation}
             onUpdateConversation={onUpdateConversation}

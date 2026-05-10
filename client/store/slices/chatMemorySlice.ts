@@ -8,6 +8,8 @@ interface ChatMemoryState {
   lastVisitedChatId: string | null;
   loading: boolean;
   error: string | null;
+  /** Chat id currently being deleted (API in flight). */
+  deletingChatId: string | null;
 }
 
 const initialState: ChatMemoryState = {
@@ -16,6 +18,7 @@ const initialState: ChatMemoryState = {
   lastVisitedChatId: null,
   loading: false,
   error: null,
+  deletingChatId: null,
 };
 
 type ConversationRow = { conversation_id: string; description: string | null };
@@ -122,9 +125,16 @@ const chatMemorySlice = createSlice({
       .addCase(fetchChatMessages.fulfilled, (state, action) => {
         state.chatMessages[action.payload.chatId] = action.payload.messages;
       })
+      .addCase(deleteChat.pending, (state, action) => {
+        state.deletingChatId = action.meta.arg;
+      })
       .addCase(deleteChat.fulfilled, (state, action) => {
+        state.deletingChatId = null;
         state.chats = state.chats.filter(chat => chat.chatId !== action.payload);
         delete state.chatMessages[action.payload];
+      })
+      .addCase(deleteChat.rejected, (state) => {
+        state.deletingChatId = null;
       });
   },
 });

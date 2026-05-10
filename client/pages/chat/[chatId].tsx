@@ -2,7 +2,6 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { deleteChat, setLastVisitedChatId, fetchChatMessages, addChat, setChatMessages } from '@/store/slices/chatMemorySlice';
-import { fetchRootFolder } from '@/store/slices/uploadSlice';
 import { Chat } from '@/components/Chat/Chat';
 import { Chatbar } from '@/components/Chatbar/Chatbar';
 import { Conversation, Message, ChatMessage } from '@/types/chat';
@@ -20,8 +19,7 @@ const ChatPage: React.FC = () => {
   const router = useRouter();
   const { chatId } = router.query;
   const dispatch = useAppDispatch();
-  const { chats, chatMessages } = useAppSelector((state) => state.chatMemory);
-  const { rootFolder } = useAppSelector((state) => state.upload);
+  const { chats, chatMessages, deletingChatId } = useAppSelector((state) => state.chatMemory);
 
   // STATE
   const [appLoading, setAppLoading] = useState<boolean>(false);
@@ -38,12 +36,6 @@ const ChatPage: React.FC = () => {
   useEffect(() => {
     loadChats();
   }, [loadChats]);
-
-  useEffect(() => {
-    if (!rootFolder) {
-      dispatch(fetchRootFolder());
-    }
-  }, [dispatch, rootFolder]);
 
   // Track metadata descriptions to preserve them during stream updates
   const metadataDescriptionsRef = useRef<Record<string, string>>({});
@@ -463,6 +455,7 @@ const ChatPage: React.FC = () => {
                 onDeleteConversation={handleDeleteConversation}
                 onUpdateConversation={handleUpdateConversation}
                 onClearConversations={handleClearConversations}
+                deletingChatId={deletingChatId}
               />
               <button
                 className={`fixed top-2.5 left-[310px] z-50 h-7 w-7 sm:top-0.5 sm:left-[310px] sm:h-8 sm:w-8 transition-colors ${

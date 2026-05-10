@@ -1,3 +1,4 @@
+import { Spinner } from '@/components/Global/Spinner';
 import { Conversation } from '@/types/chat';
 import { KeyValuePair } from '@/types/data';
 import {
@@ -7,12 +8,14 @@ import {
   IconX,
 } from '@tabler/icons-react';
 import { useRouter } from 'next/router';
-import { DragEvent, FC, useState, useRef } from 'react';
+import { DragEvent, FC, useState, useRef, useEffect } from 'react';
 
 interface Props {
   selectedConversation: Conversation;
   conversation: Conversation;
   loading: boolean;
+  /** True while DELETE /conversations/:id is in flight for this row. */
+  deleteInProgress?: boolean;
   onSelectConversation: (conversation: Conversation) => void;
   onDeleteConversation: (conversation: Conversation) => void;
   onUpdateConversation: (
@@ -26,6 +29,7 @@ export const ConversationComponent: FC<Props> = ({
   selectedConversation,
   conversation,
   loading,
+  deleteInProgress = false,
   onSelectConversation,
   onDeleteConversation,
   onUpdateConversation,
@@ -34,6 +38,14 @@ export const ConversationComponent: FC<Props> = ({
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
   const isNavigatingRef = useRef<boolean>(false);
+  const wasDeletingRef = useRef(false);
+
+  useEffect(() => {
+    if (wasDeletingRef.current && !deleteInProgress) {
+      setIsDeleting(false);
+    }
+    wasDeletingRef.current = deleteInProgress;
+  }, [deleteInProgress]);
 
   const handleDragStart = (
     e: DragEvent<HTMLButtonElement>,
@@ -51,9 +63,18 @@ export const ConversationComponent: FC<Props> = ({
 
   return (
     <div className="relative flex items-center">
+      {deleteInProgress && (
+        <div
+          className="absolute inset-0 z-20 flex items-center justify-center rounded-xl bg-black/35 backdrop-blur-[2px]"
+          aria-busy
+          aria-label="Deleting conversation"
+        >
+          <Spinner size="1.25rem" className={lightMode === 'light' ? 'text-gray-700' : 'text-white'} />
+        </div>
+      )}
       <button
         className={`flex w-full cursor-pointer items-center gap-3 rounded-xl p-3 text-sm transition-transform duration-apple active:scale-[0.98] ${
-          loading ? 'disabled:cursor-not-allowed' : ''
+          loading || deleteInProgress ? 'disabled:cursor-not-allowed' : ''
         } ${
           lightMode === 'light'
             ? isSelected
@@ -65,7 +86,7 @@ export const ConversationComponent: FC<Props> = ({
         }`}
         onClick={() => {
           // Prevent multiple simultaneous navigations
-          if (isNavigatingRef.current || loading) return;
+          if (isNavigatingRef.current || loading || deleteInProgress) return;
           
           // Call onSelectConversation first to update state
           onSelectConversation(conversation);
@@ -87,7 +108,7 @@ export const ConversationComponent: FC<Props> = ({
             });
           }
         }}
-        disabled={loading}
+        disabled={loading || deleteInProgress}
         draggable="true"
         onDragStart={(e) => handleDragStart(e, conversation)}
       >
@@ -103,7 +124,7 @@ export const ConversationComponent: FC<Props> = ({
         </div>
       </button>
 
-      {isDeleting && isSelected && (
+      {isDeleting && isSelected && !deleteInProgress && (
         <div className={`absolute right-1 z-10 flex gap-1 ${
           lightMode === 'light' ? 'text-gray-600' : 'text-gray-300'
         }`}>
@@ -116,7 +137,6 @@ export const ConversationComponent: FC<Props> = ({
             onClick={(e) => {
               e.stopPropagation();
               onDeleteConversation(conversation);
-              setIsDeleting(false);
             }}
           >
             <IconCheck size={18} />
@@ -137,7 +157,7 @@ export const ConversationComponent: FC<Props> = ({
         </div>
       )}
 
-      {isSelected && !isDeleting && (
+      {isSelected && !isDeleting && !deleteInProgress && (
         <div className={`absolute right-1 z-10 flex gap-1 ${
           lightMode === 'light' ? 'text-gray-600' : 'text-gray-300'
         }`}>

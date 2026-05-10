@@ -11,6 +11,9 @@ import {
   useRef,
   useState,
 } from 'react';
+
+const useIsomorphicLayoutEffect =
+  typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 import { ChatInput } from './ChatInput';
 import { ChatLoader } from './ChatLoader';
 import { ChatMessage } from './ChatMessage';
@@ -86,7 +89,7 @@ export const Chat: FC<Props> = memo(
 
     // Snap to bottom before first paint when opening/switching a thread or when
     // messages first load — avoids the visible "scroll down" animation.
-    useLayoutEffect(() => {
+    useIsomorphicLayoutEffect(() => {
       const container = chatContainerRef.current;
       const id = conversation.chatId ?? '';
 
