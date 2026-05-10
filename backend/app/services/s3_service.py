@@ -1,12 +1,21 @@
 from uuid import uuid4
 
 import boto3
+from botocore.config import Config
 from botocore.exceptions import ClientError
 from fastapi import UploadFile
 
 from app.settings import settings
 
-s3 = boto3.client("s3", region_name=settings.aws_region)
+_s3_client_kwargs: dict = {
+    "service_name": "s3",
+    "region_name": settings.s3_region,
+    "config": Config(signature_version="s3v4"),
+}
+if settings.s3_endpoint_url:
+    _s3_client_kwargs["endpoint_url"] = settings.s3_endpoint_url
+
+s3 = boto3.client(**_s3_client_kwargs)
 
 
 def _parse_s3_url(url: str) -> tuple[str, str]:

@@ -9,7 +9,8 @@ class Settings(BaseSettings):
     embeddings_model: str = Field(..., alias="EMBEDDINGS_MODEL")
     db_url: str = Field(..., alias="DB_URL")
     s3_bucket: str = Field(..., alias="S3_BUCKET")
-    aws_region: str = Field(..., alias="AWS_REGION")
+    s3_region: str = Field(..., alias="S3_REGION")
+    s3_endpoint_url: str | None = Field(default=None, alias="S3_ENDPOINT_URL")
 
 @lru_cache
 def get_settings() -> Settings:
