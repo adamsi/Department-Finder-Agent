@@ -62,7 +62,7 @@ builder.add_edge("generate_answer", END)
 
 
 def invoke_supervisor(db, conversation_id: str, user_prompt: str):
-    answer = ""
+    chunks: list[str] = []
 
     for msg, _ in graph.stream(
         {
@@ -75,7 +75,8 @@ def invoke_supervisor(db, conversation_id: str, user_prompt: str):
         content = msg.content
 
         if isinstance(content, str) and content:
-            answer += content
+            chunks.append(content)
             yield content
 
+    answer = "".join(chunks)
     save_message(db, conversation_id, user_prompt, answer)
