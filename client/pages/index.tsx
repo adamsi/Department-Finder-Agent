@@ -11,7 +11,7 @@ import { DEFAULT_SYSTEM_PROMPT } from '@/utils/app/const';
 import { IconArrowBarLeft, IconArrowBarRight } from '@tabler/icons-react';
 import Head from 'next/head';
 import toast from 'react-hot-toast';
-import ParticlesBackground from '@/components/Global/Particles';
+import { ParticlesBackground } from '@/components/Global/ParticlesDynamic';
 import { useConversations } from '@/hooks/useConversations';
 import { useSelectedConversation } from '@/hooks/useSelectedConversation';
 import { useChatStreaming } from '@/hooks/useChatStreaming';
@@ -30,7 +30,7 @@ const Home: React.FC = () => {
 
   // HOOKS
   // Single source of truth: conversations derived from Redux
-  const { conversations, loadChats } = useConversations();
+  const { conversations } = useConversations();
   const {
     selectedConversation,
     setSelectedConversation,
@@ -124,11 +124,6 @@ const Home: React.FC = () => {
       });
     },
   });
-
-  useEffect(() => {
-    loadChats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   useEffect(() => {
     return () => {

@@ -11,7 +11,7 @@ import { DEFAULT_SYSTEM_PROMPT } from '@/utils/app/const';
 import { IconArrowBarLeft, IconArrowBarRight } from '@tabler/icons-react';
 import Head from 'next/head';
 import toast from 'react-hot-toast';
-import ParticlesBackground from '@/components/Global/Particles';
+import { ParticlesBackground } from '@/components/Global/ParticlesDynamic';
 import { useConversations } from '@/hooks/useConversations';
 import { useChatStreaming } from '@/hooks/useChatStreaming';
 
@@ -31,11 +31,7 @@ const ChatPage: React.FC = () => {
 
   // HOOKS
   // Single source of truth: conversations derived from Redux
-  const { conversations, loadChats, loadChatMessages: loadChatMessagesFromHook } = useConversations();
-
-  useEffect(() => {
-    loadChats();
-  }, [loadChats]);
+  const { conversations, loadChatMessages: loadChatMessagesFromHook } = useConversations();
 
   // Track metadata descriptions to preserve them during stream updates
   const metadataDescriptionsRef = useRef<Record<string, string>>({});

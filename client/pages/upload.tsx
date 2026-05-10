@@ -12,7 +12,7 @@ import {
 } from '@/store/slices/uploadSlice';
 import LoadingSpinner from '@/components/Global/LoadingSpinner';
 import { Spinner } from '@/components/Global/Spinner';
-import ParticlesBackground from '@/components/Global/Particles';
+import { ParticlesBackground } from '@/components/Global/ParticlesDynamic';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import {
@@ -81,8 +81,11 @@ export default function UploadPage() {
   const [isViewerOpen, setIsViewerOpen] = useState(false);
 
   useEffect(() => {
-    dispatch(fetchRootFolder());
-  }, [dispatch]);
+    // Skip if AuthGate already prefetched or a fetch is in flight.
+    if (!rootFolder && !loading) {
+      dispatch(fetchRootFolder());
+    }
+  }, [dispatch, rootFolder, loading]);
 
   useEffect(() => {
     if (currentFolder && rootFolder) {
