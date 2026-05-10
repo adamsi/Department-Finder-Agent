@@ -1,3 +1,5 @@
+from collections.abc import AsyncIterator
+
 from langgraph.constants import START, END
 from langgraph.graph import StateGraph, MessagesState
 
@@ -61,10 +63,10 @@ builder.add_edge("retrieve_rag", "generate_answer")
 builder.add_edge("generate_answer", END)
 
 
-def invoke_supervisor(db, conversation_id: str, user_prompt: str):
+async def invoke_supervisor(db, conversation_id: str, user_prompt: str) -> AsyncIterator[str]:
     chunks: list[str] = []
 
-    for msg, _ in graph.stream(
+    async for msg, _ in graph.astream(
         {
             "messages": [{"role": "user", "content": user_prompt}],
             "user_prompt": user_prompt,
