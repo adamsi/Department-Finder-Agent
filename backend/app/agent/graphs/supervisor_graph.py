@@ -4,7 +4,7 @@ from langgraph.graph import StateGraph, MessagesState
 from langgraph.checkpoint.postgres import PostgresSaver
 from app.agent.models import llm_model
 from app.agent.prompts import supervisor_prompt
-from app.agent.rag_service import get_rag_context
+from app.agent.rag import get_rag_context
 from app.repositories.chat_memory_repository import save_message
 from app.settings import settings
 

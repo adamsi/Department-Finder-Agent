@@ -1,7 +1,7 @@
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
 
-from app.agent import rag_service
+from app.agent import rag
 from app.models.models import S3Document, S3Folder
 from app.repositories import document_repository as doc_repo
 from app.services.s3_service import delete_file, upload_file
@@ -44,7 +44,7 @@ async def create_new_documents(
                     folder_id=folder.id,
                 )
                 doc_repo.add_document(session, doc)
-                await rag_service.ingest_docs({str(doc.id): file})
+                await rag.ingest_docs({str(doc.id): file})
                 file.file.seek(0)
                 doc.url = upload_file(file)
                 out.append(doc)
@@ -60,7 +60,7 @@ def delete_documents(session: Session, document_ids: list[int]) -> None:
     with session.begin():
         doc_repo.delete_documents(session, docs)
     for d in docs:
-        rag_service.delete_docs(d)
+        rag.delete_docs(d)
         delete_file(d.url)
 
 
@@ -70,8 +70,8 @@ async def edit_document(session: Session, file: UploadFile, document_id: int) ->
     if doc is None:
         raise ValueError(f"Document with id: `{document_id}` not found")
     delete_file(doc.url)
-    rag_service.delete_docs(doc)
-    await rag_service.ingest_docs({str(doc.id): file})
+    rag.delete_docs(doc)
+    await rag.ingest_docs({str(doc.id): file})
     file.file.seek(0)
     doc.url = upload_file(file)
     doc.name = file.filename or doc.name

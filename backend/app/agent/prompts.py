@@ -1,7 +1,8 @@
 from langchain_core.prompts import ChatPromptTemplate
 
+# system prompt strings
 
-_supervisor_prompt_str = """
+_supervisor_system_str = """
 You are an organization responsibility finder assistant.
 your job is to identify the most relevant department/team/responsible role
 for the user's request, with contact information.
@@ -32,7 +33,22 @@ RAG CONTEXT:
 {rag_context}
 """
 
+_chat_title_system_str = """
+Generate a chat title based on the message, limiting it to 20 characters.
+Output only the title text, no quotes or labels. Count spaces toward the limit.
+"""
+
+
+# prompt templates
+
 supervisor_prompt = ChatPromptTemplate.from_messages([
-    ("system", _supervisor_prompt_str),
+    ("system", _supervisor_system_str),
     ("human", "{user_prompt}"),
+])
+
+
+
+chat_title_prompt = ChatPromptTemplate.from_messages([
+    ("system", _chat_title_system_str),
+    ("human", "{message}"),
 ])
