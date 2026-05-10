@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from fastapi import UploadFile
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.agent import rag
 from app.models.models import S3Document, S3Folder
@@ -90,3 +90,47 @@ def get_root_folder(session: Session) -> S3Folder:
     if with_documents is not None:
         root.documents = with_documents.documents
     return root
+
+
+def create_folder(session: Session, name: str, parent_folder_id: UUID) -> S3Folder:
+    parent = doc_repo.get_folder(session, parent_folder_id)
+    if parent is None:
+        raise ValueError("Parent folder not found")
+    label = name.strip()
+    if not label:
+        raise ValueError("Folder name is required")
+    folder = S3Folder(name=label, parent_id=parent.id)
+    session.add(folder)
+    session.commit()
+    session.refresh(folder)
+    return folder
+
+
+def _delete_folder_tree(session: Session, folder_id: UUID) -> None:
+    folder = session.get(
+        S3Folder,
+        folder_id,
+        options=[
+            selectinload(S3Folder.subfolders),
+            selectinload(S3Folder.documents),
+        ],
+    )
+    if folder is None:
+        return
+    for sf in list(folder.subfolders or []):
+        _delete_folder_tree(session, sf.id)
+    for doc in list(folder.documents or []):
+        rag.delete_docs(doc)
+        if doc.url:
+            try:
+                delete_file(doc.url)
+            except Exception:
+                pass
+        session.delete(doc)
+    session.delete(folder)
+
+
+def delete_folders(session: Session, folder_ids: list[UUID]) -> None:
+    for fid in folder_ids:
+        _delete_folder_tree(session, fid)
+    session.commit()

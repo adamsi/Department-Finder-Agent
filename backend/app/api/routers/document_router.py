@@ -3,6 +3,7 @@ from uuid import UUID
 
 from botocore.exceptions import ClientError
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from starlette.responses import Response
 
@@ -13,6 +14,11 @@ from app.services import document_service
 from app.services.s3_service import get_s3_object
 
 router = APIRouter(prefix="/documents")
+
+
+class CreateFolderBody(BaseModel):
+    name: str
+    parent_folder_id: UUID
 
 
 def _public_base(request: Request) -> str:
@@ -37,6 +43,19 @@ def _folder_json(folder: S3Folder, base: str) -> dict:
         "childrenFolders": [_folder_json(sf, base) for sf in subs],
         "childrenDocuments": [_document_json(d, base) for d in docs],
     }
+
+
+@router.post("/folders", summary="Create a subfolder")
+def create_folder_route(
+    request: Request,
+    session: Annotated[Session, Depends(get_db)],
+    body: CreateFolderBody,
+) -> dict:
+    try:
+        folder = document_service.create_folder(session, body.name, body.parent_folder_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from None
+    return _folder_json(folder, _public_base(request))
 
 
 @router.get("", summary="Get root folder tree")
@@ -83,6 +102,14 @@ def delete_documents(
     document_ids: Annotated[list[UUID], Query()],
 ) -> None:
     document_service.delete_documents(session, document_ids)
+
+
+@router.delete("/folders", summary="Delete folders and their contents")
+def delete_folders_route(
+    session: Annotated[Session, Depends(get_db)],
+    folder_ids: Annotated[list[UUID], Query()],
+) -> None:
+    document_service.delete_folders(session, folder_ids)
 
 
 @router.get("/{document_id}/file", summary="Download document for preview (full body, not chunked)")

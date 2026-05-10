@@ -1,6 +1,15 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { api, handleAxiosError } from '@/utils/api';
-import type { CreateFolderDTO, FolderEntity, DocumentEntity } from '@/types/upload';
+import type { CreateFolderDTO, FolderEntity } from '@/types/upload';
+
+function findFolderInTree(tree: FolderEntity, id: string): FolderEntity | null {
+  if (tree.id === id) return tree;
+  for (const c of tree.childrenFolders ?? []) {
+    const hit = findFolderInTree(c, id);
+    if (hit) return hit;
+  }
+  return null;
+}
 
 interface UploadState {
   uploading: boolean;
@@ -101,9 +110,14 @@ export const createFolder = createAsyncThunk(
   'upload/createFolder',
   async (folderData: CreateFolderDTO, { rejectWithValue }) => {
     try {
-      const response = await api.post('/ingestion/folders', folderData, {
-        withCredentials: true,
-      });
+      const response = await api.post(
+        '/documents/folders',
+        {
+          name: folderData.name,
+          parent_folder_id: folderData.parentFolderId,
+        },
+        { withCredentials: true }
+      );
       return response.data;
     } catch (error) {
       return rejectWithValue(handleAxiosError(error));
@@ -131,8 +145,9 @@ export const deleteFolders = createAsyncThunk(
   'upload/deleteFolders',
   async (ids: string[], { rejectWithValue }) => {
     try {
-      await api.delete('/ingestion/folders', {
-        data: ids,
+      const qs = new URLSearchParams();
+      ids.forEach((id) => qs.append('folder_ids', id));
+      await api.delete(`/documents/folders?${qs.toString()}`, {
         withCredentials: true,
       });
       return ids;
@@ -214,8 +229,14 @@ const uploadSlice = createSlice({
       })
       .addCase(fetchRootFolder.fulfilled, (state, action) => {
         state.loading = false;
-        state.rootFolder = action.payload;
-        state.currentFolder = action.payload;
+        const root = action.payload;
+        state.rootFolder = root;
+        if (!state.currentFolder) {
+          state.currentFolder = root;
+        } else {
+          const next = findFolderInTree(root, state.currentFolder.id);
+          state.currentFolder = next ?? root;
+        }
         state.error = null;
       })
       .addCase(fetchRootFolder.rejected, (state, action) => {
@@ -224,18 +245,13 @@ const uploadSlice = createSlice({
       })
       // Create folder
       .addCase(createFolder.pending, (state) => {
-        state.loading = true;
         state.error = null;
       })
-      .addCase(createFolder.fulfilled, (state, action) => {
-        state.loading = false;
+      .addCase(createFolder.fulfilled, (state) => {
         state.success = 'Folder created successfully!';
         state.error = null;
-        // Refresh the folder structure after creation
-        // In a real app, you might want to refetch or update locally
       })
       .addCase(createFolder.rejected, (state, action) => {
-        state.loading = false;
         state.error = action.payload as string;
       })
       // Delete documents

@@ -1,4 +1,9 @@
 /** Minimal shapes for folder/document APIs (ingestion). */
+export interface CreateFolderDTO {
+  name: string;
+  parentFolderId: string;
+}
+
 export interface DocumentEntity {
   id: string;
   name: string;

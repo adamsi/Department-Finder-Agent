@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { IconX, IconDeviceFloppy, IconEye, IconFile } from '@tabler/icons-react';
+import { IconX, IconDeviceFloppy, IconFile } from '@tabler/icons-react';
 import type { DocumentEntity } from '@/types/upload';
 import LoadingSpinner from '@/components/Global/LoadingSpinner';
 
@@ -62,7 +62,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 
     setIsLoading(true);
     try {
-      const response = await fetch(document.url, { credentials: 'include' });
+      const response = await fetch(document.url, { credentials: 'include', mode: 'cors' });
       if (response.ok) {
         const content = await response.text();
         setDocumentContent(content);

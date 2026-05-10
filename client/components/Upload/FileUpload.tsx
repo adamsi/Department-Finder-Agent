@@ -10,9 +10,10 @@ interface FileUploadProps {
   className?: string;
   /** Numeric folder id from the API (string or number is fine). */
   parentFolderId: string | number;
+  onUploadComplete?: () => void;
 }
 
-const FileUpload: React.FC<FileUploadProps> = ({ className = '', parentFolderId }) => {
+const FileUpload: React.FC<FileUploadProps> = ({ className = '', parentFolderId, onUploadComplete }) => {
   const dispatch = useAppDispatch();
   const { uploading } = useSelector((state: RootState) => state.upload);
   
@@ -60,13 +61,14 @@ const FileUpload: React.FC<FileUploadProps> = ({ className = '', parentFolderId 
         uploadFiles({ files: selectedFiles, parentFolderId: String(parentFolderId) })
       ).unwrap();
       setSelectedFiles([]);
-      dispatch(fetchRootFolder());
+      await dispatch(fetchRootFolder()).unwrap();
+      onUploadComplete?.();
       toast.success('Upload complete');
     } catch (error: unknown) {
       console.error('Upload failed:', error);
       toast.error(typeof error === 'string' ? error : 'Upload failed');
     }
-  }, [dispatch, selectedFiles, parentFolderId]);
+  }, [dispatch, selectedFiles, parentFolderId, onUploadComplete]);
 
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
