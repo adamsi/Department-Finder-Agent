@@ -25,23 +25,27 @@ def _public_base(request: Request) -> str:
     return str(request.base_url).rstrip("/")
 
 
-def _document_json(doc: S3Document, base: str) -> dict:
+def _api_prefix(request: Request) -> str:
+    return request.headers.get("x-forwarded-prefix", "").rstrip("/")
+
+
+def _document_json(doc: S3Document, request: Request, base: str) -> dict:
     return {
         "id": str(doc.id),
         "name": doc.name,
-        "url": f"{base}/documents/{doc.id}/file",
+        "url": f"{base}{_api_prefix(request)}/documents/{doc.id}/file",
         "contentType": doc.content_type,
     }
 
 
-def _folder_json(folder: S3Folder, base: str) -> dict:
+def _folder_json(folder: S3Folder, request: Request, base: str) -> dict:
     subs = folder.subfolders or []
     docs = folder.documents or []
     return {
         "id": str(folder.id),
         "name": folder.name,
-        "childrenFolders": [_folder_json(sf, base) for sf in subs],
-        "childrenDocuments": [_document_json(d, base) for d in docs],
+        "childrenFolders": [_folder_json(sf, request, base) for sf in subs],
+        "childrenDocuments": [_document_json(d, request, base) for d in docs],
     }
 
 
@@ -55,7 +59,7 @@ def create_folder_route(
         folder = document_service.create_folder(session, body.name, body.parent_folder_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from None
-    return _folder_json(folder, _public_base(request))
+    return _folder_json(folder, request, _public_base(request))
 
 
 @router.get("", summary="Get root folder tree")
@@ -64,7 +68,7 @@ def get_root_folder(
     session: Annotated[Session, Depends(get_db)],
 ) -> dict:
     root = document_service.get_root_folder(session)
-    return _folder_json(root, _public_base(request))
+    return _folder_json(root, request, _public_base(request))
 
 
 @router.post("", summary="Upload new documents")
@@ -79,7 +83,7 @@ async def create_documents(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     base = _public_base(request)
-    return [_document_json(d, base) for d in docs]
+    return [_document_json(d, request, base) for d in docs]
 
 
 @router.patch("/edit/{document_id}", summary="Edit a document")
@@ -93,7 +97,7 @@ async def edit_document(
         doc = await document_service.edit_document(session, file, document_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    return _document_json(doc, _public_base(request))
+    return _document_json(doc, request, _public_base(request))
 
 
 @router.delete("/delete", summary="Delete documents by ids")
