@@ -3,7 +3,6 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
 import { loginWithPasskey } from '@/utils/api';
-
 export default function LoginPage() {
   const router = useRouter();
   const [passkey, setPasskey] = useState('');

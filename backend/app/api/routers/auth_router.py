@@ -26,3 +26,14 @@ def login(body: LoginRequest, response: Response) -> dict[str, bool]:
         max_age=60 * 60 * 24 * 10,  # 10 days
     )
     return {"ok": True}
+
+
+@router.post("/logout")
+def logout(response: Response) -> dict[str, bool]:
+    response.delete_cookie(
+        key=SESSION_COOKIE,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+    )
+    return {"ok": True}

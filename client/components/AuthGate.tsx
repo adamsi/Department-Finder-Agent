@@ -1,57 +1,76 @@
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAppDispatch } from '@/store/hooks';
 import { fetchAllChats } from '@/store/slices/chatMemorySlice';
 import { fetchRootFolder } from '@/store/slices/uploadSlice';
+import { setAppLoading } from '@/utils/appLoading';
+import {
+  clearAuthSession,
+  isAuthSessionValid,
+  setAuthSessionValid,
+} from '@/utils/authSession';
 
 /**
- * Session guard for non-login routes: validates cookie in the background and
- * redirects to `/login` on failure. Does not block UI — chats and documents
- * fill Redux when requests complete.
+ * Session guard: blocks UI until auth is resolved; loading overlay is global.
  */
 export function AuthGate({ children }: { children: ReactNode }) {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const [mounted, setMounted] = useState(false);
-  const authOkRef = useRef(false);
+  const isLogin = router.pathname === '/login';
+  const [ready, setReady] = useState(false);
   const checkSeqRef = useRef(0);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  useLayoutEffect(() => {
+    if (isLogin) {
+      setAppLoading('auth', false);
+      return;
+    }
+    setAppLoading('auth', !ready);
+    return () => setAppLoading('auth', false);
+  }, [ready, isLogin]);
 
   useEffect(() => {
-    if (!mounted) return;
-
-    if (router.pathname === '/login') {
-      authOkRef.current = false;
+    if (isLogin) {
+      if (isAuthSessionValid()) {
+        void router.replace('/');
+      } else {
+        setReady(true);
+      }
       return;
     }
 
-    if (authOkRef.current) {
+    if (isAuthSessionValid()) {
+      setReady(true);
       return;
     }
 
+    setReady(false);
     const seq = ++checkSeqRef.current;
     let cancelled = false;
 
-    void dispatch(fetchRootFolder()).unwrap().catch(() => undefined);
     void dispatch(fetchAllChats())
       .unwrap()
       .then(() => {
         if (cancelled || seq !== checkSeqRef.current) return;
-        authOkRef.current = true;
+        setAuthSessionValid(true);
+        void dispatch(fetchRootFolder()).unwrap().catch(() => undefined);
+        setReady(true);
       })
       .catch(async () => {
         if (cancelled || seq !== checkSeqRef.current) return;
-        authOkRef.current = false;
+        clearAuthSession();
+        setReady(true);
         await router.replace('/login');
       });
 
     return () => {
       cancelled = true;
     };
-  }, [mounted, router.pathname, router, dispatch]);
+  }, [isLogin, router, dispatch]);
+
+  if (!ready) {
+    return null;
+  }
 
   return <>{children}</>;
 }

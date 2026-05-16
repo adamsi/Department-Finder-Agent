@@ -73,3 +73,98 @@ html {
 pre:has(div.codeblock) {
   padding: 0;
 }
+
+/* App loading — spinning logo globe + fiber rings */
+.app-loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, #020617 0%, #0f172a 45%, #020617 100%);
+}
+
+.app-loading-glow {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(59, 130, 246, 0.22) 0%, transparent 58%);
+}
+
+.app-loading-scene {
+  position: relative;
+  width: 168px;
+  height: 168px;
+  perspective: 520px;
+  transform-style: preserve-3d;
+}
+
+.app-loading-globe {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 88px;
+  height: 88px;
+  margin: -44px 0 0 -44px;
+  border-radius: 50%;
+  background: url('/sa-logo.png') center / cover no-repeat;
+  box-shadow:
+    inset -10px -14px 28px rgba(0, 0, 0, 0.55),
+    0 0 36px rgba(59, 130, 246, 0.45);
+  animation: app-globe-spin 3.2s linear infinite;
+}
+
+.app-loading-orbit {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+
+.app-loading-ring {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: #60a5fa;
+  border-right-color: rgba(59, 130, 246, 0.55);
+  animation: app-orbit-spin 2.4s linear infinite;
+}
+
+.app-loading-ring-delay {
+  animation-duration: 3s;
+  border-top-color: #22d3ee;
+}
+
+.app-loading-ring-delay-2 {
+  animation-duration: 3.6s;
+  border-top-color: #818cf8;
+}
+
+.app-loading-label {
+  margin-top: 2rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: rgba(147, 197, 253, 0.85);
+}
+
+@keyframes app-globe-spin {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(360deg);
+  }
+}
+
+@keyframes app-orbit-spin {
+  from {
+    transform: rotateZ(0deg);
+  }
+  to {
+    transform: rotateZ(360deg);
+  }
+}

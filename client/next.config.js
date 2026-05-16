@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
+  devIndicators: {
+    buildActivity: false,
+  },
 
   eslint: {
     // Warning: This allows production builds to successfully complete even if
