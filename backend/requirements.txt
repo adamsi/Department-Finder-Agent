@@ -2,7 +2,7 @@ langgraph
 langchain
 langchain-openai
 fastapi
-uvicorn
+uvicorn[standard]
 langchain-core
 langchain-text-splitters
 langchain_postgres
