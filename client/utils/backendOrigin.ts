@@ -24,3 +24,24 @@ export function getWsBaseUrl(): string {
   }
   return `ws://${base.replace(/^http:\/\//, '')}`;
 }
+
+/** Build a WebSocket URL by reusing the API host and any public path prefix such as `/api`. */
+export function buildWsUrl(path: string): string {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  const base = getApiBaseUrl();
+
+  if (base.startsWith('/')) {
+    if (typeof window === 'undefined') {
+      return `ws://localhost:8080${normalizedPath}`;
+    }
+    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    return `${protocol}://${window.location.host}${base}${normalizedPath}`;
+  }
+
+  const url = new URL(base);
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+  url.pathname = `${url.pathname.replace(/\/$/, '')}${normalizedPath}`;
+  url.search = '';
+  url.hash = '';
+  return url.toString();
+}

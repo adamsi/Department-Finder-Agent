@@ -1,4 +1,4 @@
-import { getWsBaseUrl } from '@/utils/backendOrigin';
+import { buildWsUrl } from '@/utils/backendOrigin';
 
 export type ChatSocketHandlers = {
   onChunk: (text: string) => void;
@@ -8,7 +8,9 @@ export type ChatSocketHandlers = {
 };
 
 /**
- * Native WebSocket: matches FastAPI `/ws/chat/{conversation_id}` (text in / text out).
+ * Native WebSocket: uses the API base URL and appends `/ws/chat/{conversation_id}`.
+ * Local direct backend: `ws://localhost:8080/ws/chat/...`
+ * Reverse-proxied production: `wss://host/api/ws/chat/...`
  * Cookies are sent automatically for same-site requests to the API host.
  */
 export function createChatSocket(
@@ -16,7 +18,7 @@ export function createChatSocket(
   userMessage: string,
   handlers: ChatSocketHandlers
 ): WebSocket {
-  const url = `${getWsBaseUrl()}/ws/chat/${encodeURIComponent(conversationId)}`;
+  const url = buildWsUrl(`/ws/chat/${encodeURIComponent(conversationId)}`);
   const ws = new WebSocket(url);
 
   ws.onopen = () => {
