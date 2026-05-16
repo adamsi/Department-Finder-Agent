@@ -1,4 +1,5 @@
-import { ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
+import { useIsomorphicLayoutEffect } from '@/hooks/useIsomorphicLayoutEffect';
 import { useRouter } from 'next/router';
 import { useAppDispatch } from '@/store/hooks';
 import { fetchAllChats } from '@/store/slices/chatMemorySlice';
@@ -20,7 +21,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const checkSeqRef = useRef(0);
 
-  useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (isLogin) {
       setAppLoading('auth', false);
       return;
