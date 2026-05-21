@@ -39,7 +39,7 @@ export function buildWsUrl(path: string): string {
   }
 
   const url = new URL(base);
-  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+  url.protocol = 'ws:';
   url.pathname = `${url.pathname.replace(/\/$/, '')}${normalizedPath}`;
   url.search = '';
   url.hash = '';
