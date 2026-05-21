@@ -1,11 +1,13 @@
-import { IconMoon, IconSun, IconUpload } from '@tabler/icons-react';
-import { FC } from 'react';
+import { IconLogout, IconMoon, IconSun, IconUpload } from '@tabler/icons-react';
+import { FC, useState } from 'react';
 import { SidebarButton } from '../Sidebar/SidebarButton';
 import { ClearConversations } from './ClearConversations';
 import { useAppDispatch } from '@/store/hooks';
 import { setLastVisitedChatId } from '@/store/slices/chatMemorySlice';
 import { useRouter } from 'next/router';
 import { Conversation } from '@/types/chat';
+import { logout } from '@/utils/api';
+import { clearAuthSession } from '@/utils/authSession';
 
 interface Props {
   lightMode: 'light' | 'dark';
@@ -24,6 +26,20 @@ export const ChatbarSettings: FC<Props> = ({
 }) => {
   const dispatch = useAppDispatch();
   const router = useRouter();
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  async function handleLogout() {
+    setLoggingOut(true);
+    try {
+      await logout();
+    } catch {
+      // still clear local session and redirect
+    } finally {
+      clearAuthSession();
+      await router.replace('/login');
+      setLoggingOut(false);
+    }
+  }
 
   return (
     <div
@@ -51,6 +67,13 @@ export const ChatbarSettings: FC<Props> = ({
           dispatch(setLastVisitedChatId(selectedConversation?.chatId || null));
           router.push('/upload');
         }}
+        lightMode={lightMode}
+      />
+
+      <SidebarButton
+        text={loggingOut ? 'Signing out…' : 'Log out'}
+        icon={<IconLogout size={18} />}
+        onClick={() => void handleLogout()}
         lightMode={lightMode}
       />
     </div>

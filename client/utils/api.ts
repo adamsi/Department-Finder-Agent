@@ -42,4 +42,8 @@ export async function loginWithPasskey(passkey: string): Promise<void> {
   await api.post('/auth/login', { passkey });
 }
 
+export async function logout(): Promise<void> {
+  await api.post('/auth/logout');
+}
+
 export default api;

@@ -1,10 +1,14 @@
 import '@/styles/globals.css';
 import type { AppProps } from 'next/app';
 import { Inter } from 'next/font/google';
+import { useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { Toaster } from 'react-hot-toast';
 import { Provider } from 'react-redux';
 import { store } from '@/store';
 import { AuthGate } from '@/components/AuthGate';
+import { AppLoadingOverlay } from '@/components/Global/AppLoadingOverlay';
+import { setAppLoading } from '@/utils/appLoading';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 
@@ -39,10 +43,31 @@ const darkTheme = createTheme({
   },
 });
 
+function RouteLoading() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const start = () => setAppLoading('route', true);
+    const end = () => setAppLoading('route', false);
+    router.events.on('routeChangeStart', start);
+    router.events.on('routeChangeComplete', end);
+    router.events.on('routeChangeError', end);
+    return () => {
+      router.events.off('routeChangeStart', start);
+      router.events.off('routeChangeComplete', end);
+      router.events.off('routeChangeError', end);
+    };
+  }, [router]);
+
+  return null;
+}
+
 function AppContent({ Component, pageProps }: Pick<AppProps, 'Component' | 'pageProps'>) {
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
+      <RouteLoading />
+      <AppLoadingOverlay />
       <div className={inter.className}>
         <Toaster
           position="bottom-right"
